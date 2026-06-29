@@ -1,0 +1,30 @@
+name: Garmin Sync
+version: "1.0.0"
+slug: garmin-sync
+description: >
+  Syncs Garmin Connect health data to PostgreSQL. Runs the full ETL pipeline
+  every N minutes — sleep, heart rate, HRV, stress, body battery, steps,
+  respiration, floors, SpO2, activities, training readiness, and more.
+arch:
+  - aarch64
+  - amd64
+  - armv7
+startup: application
+boot: auto
+init: false
+hassio_api: false
+homeassistant_api: false
+options:
+  garmin_email: ""
+  garmin_password: ""
+  garmin_token_json: ""
+  database_url: ""
+  sync_interval_min: 30
+  data_types: ""
+schema:
+  garmin_email: str
+  garmin_password: password
+  garmin_token_json: str
+  database_url: str
+  sync_interval_min: int(5,1440)
+  data_types: str
