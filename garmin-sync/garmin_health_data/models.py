@@ -26,6 +26,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import text
+from sqlalchemy.sql.elements import quoted_name
 
 
 # Base class for all models.
@@ -73,7 +74,7 @@ class User(Base, InsertBase):
     Contains stable user identification and basic profile information.
     """
 
-    __tablename__ = "user"
+    __tablename__ = quoted_name("user", True)
 
     # User identification.
     user_id = Column(BigInteger, primary_key=True)

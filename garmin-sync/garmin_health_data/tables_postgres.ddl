@@ -11,7 +11,7 @@ Description: This script creates database tables and other SQL resources for sto
 ----------------------------------------------------------------------------------------
 
 -- User table containing user identity and basic demographics.
-CREATE TABLE IF NOT EXISTS user (
+CREATE TABLE IF NOT EXISTS "user" (
     -- User identification.
     user_id BIGINT PRIMARY KEY
 
@@ -25,23 +25,23 @@ CREATE TABLE IF NOT EXISTS user (
 
 -- Indexes for user table.
 CREATE INDEX IF NOT EXISTS user_full_name_idx
-ON user (full_name);
+ON "user" (full_name);
 CREATE INDEX IF NOT EXISTS user_create_ts_brin_idx
-ON user USING brin (create_ts);
+ON "user" USING brin (create_ts);
 
 -- Table comment.
-COMMENT ON TABLE user IS
+COMMENT ON TABLE "user" IS
 'User identity and basic demographic data from Garmin Connect. Contains '
 'stable user identification and basic profile information.';
 
 -- Column comments.
-COMMENT ON COLUMN user.user_id IS
+COMMENT ON COLUMN "user".user_id IS
 'Unique identifier for the user in Garmin Connect.';
-COMMENT ON COLUMN user.full_name IS
+COMMENT ON COLUMN "user".full_name IS
 'Full name of the user.';
-COMMENT ON COLUMN user.birth_date IS
+COMMENT ON COLUMN "user".birth_date IS
 'User birth date.';
-COMMENT ON COLUMN user.create_ts IS
+COMMENT ON COLUMN "user".create_ts IS
 'Timestamp when the record was created in the database.';
 
 ----------------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ COMMENT ON COLUMN user.create_ts IS
 CREATE TABLE IF NOT EXISTS user_profile (
     -- Record identification.
     user_profile_id SERIAL PRIMARY KEY
-    , user_id BIGINT NOT NULL REFERENCES user (user_id)
+    , user_id BIGINT NOT NULL REFERENCES "user" (user_id)
 
     -- Physical characteristics.
     , gender TEXT
@@ -124,7 +124,7 @@ COMMENT ON COLUMN user_profile.create_ts IS
 CREATE TABLE IF NOT EXISTS activity (
     -- Activity identification.
     activity_id BIGINT PRIMARY KEY
-    , user_id BIGINT NOT NULL REFERENCES user (user_id)
+    , user_id BIGINT NOT NULL REFERENCES "user" (user_id)
     , activity_name TEXT
     , activity_type_id INTEGER NOT NULL
     , activity_type_key TEXT NOT NULL
@@ -779,7 +779,7 @@ CREATE TABLE IF NOT EXISTS sleep (
     sleep_id SERIAL PRIMARY KEY
 
     -- Foreign key reference.
-    , user_id BIGINT NOT NULL REFERENCES user (user_id)
+    , user_id BIGINT NOT NULL REFERENCES "user" (user_id)
 
     -- Non-nullable timestamps and calendar date.
     , start_ts TIMESTAMPTZ NOT NULL
@@ -1294,7 +1294,7 @@ COMMENT ON COLUMN breathing_disruption.create_ts IS
 
 -- VO2 max data from training status including generic and cycling measurements.
 CREATE TABLE IF NOT EXISTS vo2_max (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , date DATE
     , vo2_max_generic FLOAT
     , vo2_max_cycling FLOAT
@@ -1336,7 +1336,7 @@ COMMENT ON COLUMN vo2_max.update_ts IS
 
 -- Heat and altitude acclimation data from training status.
 CREATE TABLE IF NOT EXISTS acclimation (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , date DATE
     , altitude_acclimation FLOAT
     , heat_acclimation_percentage FLOAT
@@ -1393,7 +1393,7 @@ COMMENT ON COLUMN acclimation.update_ts IS
 
 -- Training load and status data including monthly load balance and ACWR metrics.
 CREATE TABLE IF NOT EXISTS training_load (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , date DATE
 
     -- Monthly training load balance.
@@ -1513,7 +1513,7 @@ COMMENT ON COLUMN training_load.update_ts IS
 
 -- Training readiness data providing insights into recovery and training capacity.
 CREATE TABLE IF NOT EXISTS training_readiness (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , timestamp TIMESTAMPTZ
     , timezone_offset_hours FLOAT NOT NULL
 
@@ -1682,7 +1682,7 @@ COMMENT ON COLUMN training_readiness.update_ts IS
 -- Stress level timeseries data capturing stress measurements throughout the day.
 -- Time interval: 3 minute intervals (~180 seconds).
 CREATE TABLE IF NOT EXISTS stress (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , timestamp TIMESTAMPTZ
     , value INTEGER
 
@@ -1723,7 +1723,7 @@ COMMENT ON COLUMN stress.create_ts IS
 -- Body battery level timeseries data capturing energy levels throughout the day.
 -- Time interval: 3 minute intervals (~180 seconds).
 CREATE TABLE IF NOT EXISTS body_battery (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , timestamp TIMESTAMPTZ
     , value INTEGER
 
@@ -1762,7 +1762,7 @@ COMMENT ON COLUMN body_battery.create_ts IS
 
 -- Heart rate data from Garmin devices at regular 2-minute intervals.
 CREATE TABLE IF NOT EXISTS heart_rate (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , timestamp TIMESTAMPTZ
     , value INTEGER
 
@@ -1801,7 +1801,7 @@ COMMENT ON COLUMN heart_rate.create_ts IS
 
 -- Step count data from Garmin devices at regular 15-minute intervals.
 CREATE TABLE IF NOT EXISTS steps (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , timestamp TIMESTAMPTZ
     , value INTEGER
     , activity_level TEXT
@@ -1850,7 +1850,7 @@ COMMENT ON COLUMN steps.create_ts IS
 
 -- Respiration rate data from Garmin devices at regular 2-minute intervals.
 CREATE TABLE IF NOT EXISTS respiration (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , timestamp TIMESTAMPTZ
     , value FLOAT
 
@@ -1889,7 +1889,7 @@ COMMENT ON COLUMN respiration.create_ts IS
 
 -- Intensity minutes table for storing daily intensity minute measurements.
 CREATE TABLE IF NOT EXISTS intensity_minutes (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , timestamp TIMESTAMPTZ
     , value FLOAT
 
@@ -1929,7 +1929,7 @@ COMMENT ON COLUMN intensity_minutes.create_ts IS
 
 -- Body composition table for storing scale weigh-ins.
 CREATE TABLE IF NOT EXISTS body_composition (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , timestamp TIMESTAMPTZ
     , weight FLOAT
     , bmi FLOAT
@@ -2000,7 +2000,7 @@ COMMENT ON COLUMN body_composition.create_ts IS
 
 -- Floors table for storing floors climbed measurements.
 CREATE TABLE IF NOT EXISTS floors (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , timestamp TIMESTAMPTZ
     , ascended INTEGER
     , descended INTEGER
@@ -2053,7 +2053,7 @@ COMMENT ON COLUMN floors.create_ts IS
 -- sub-fields (symptoms, moods, discharge) live in menstrual_cycle_tag with
 -- delete-then-insert per (user_id, date) semantics so user removals propagate.
 CREATE TABLE IF NOT EXISTS menstrual_cycle_day (
-    user_id BIGINT NOT NULL REFERENCES user (user_id)
+    user_id BIGINT NOT NULL REFERENCES "user" (user_id)
     , date DATE NOT NULL
     , cycle_start_date DATE
     , day_in_cycle INTEGER
@@ -2199,7 +2199,7 @@ COMMENT ON COLUMN menstrual_cycle_tag.create_ts IS
 -- Garmin's projection dates shift as new data is logged; observed rows use upsert by
 -- (user_id, start_date).
 CREATE TABLE IF NOT EXISTS menstrual_cycle_summary (
-    user_id BIGINT NOT NULL REFERENCES user (user_id)
+    user_id BIGINT NOT NULL REFERENCES "user" (user_id)
     , start_date DATE NOT NULL
     , period_length INTEGER
     , predicted_cycle BOOLEAN NOT NULL
@@ -2246,7 +2246,7 @@ COMMENT ON COLUMN menstrual_cycle_summary.update_ts IS
 ----------------------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS personal_record (
-    user_id BIGINT NOT NULL REFERENCES user (user_id)
+    user_id BIGINT NOT NULL REFERENCES "user" (user_id)
     , activity_id BIGINT REFERENCES activity (activity_id)
     , timestamp TIMESTAMPTZ NOT NULL
     , type_id INTEGER NOT NULL
@@ -2302,7 +2302,7 @@ COMMENT ON COLUMN personal_record.create_ts IS
 
 -- Race predictions table for storing predicted race times.
 CREATE TABLE IF NOT EXISTS race_predictions (
-    user_id BIGINT REFERENCES user (user_id)
+    user_id BIGINT REFERENCES "user" (user_id)
     , date DATE
     , time_5k FLOAT
     , time_10k FLOAT
