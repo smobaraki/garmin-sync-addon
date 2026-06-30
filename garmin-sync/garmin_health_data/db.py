@@ -8,6 +8,7 @@ a local SQLite file.
 """
 
 import os
+import re
 import sqlite3
 import sys
 from contextlib import contextmanager
@@ -158,6 +159,8 @@ def _execute_ddl_on_postgresql(engine) -> None:
     if not ddl_file.exists():
         raise FileNotFoundError(f"PostgreSQL DDL file not found: {ddl_file}")
     ddl_sql = ddl_file.read_text()
+    ddl_sql = re.sub(r'/\*.*?\*/', '', ddl_sql, flags=re.DOTALL)
+    ddl_sql = re.sub(r'--[^\n]*', '', ddl_sql)
 
     with engine.connect() as conn:
         statements = [s.strip() for s in ddl_sql.split(";")]
