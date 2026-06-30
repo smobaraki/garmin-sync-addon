@@ -140,6 +140,44 @@ def get_engine(db_path: str = "garmin_data.db"):
     return engine
 
 
+def _split_sql_statements(sql: str):
+    """Split SQL into statements, respecting single-quoted strings."""
+    stmts = []
+    current = []
+    i = 0
+    n = len(sql)
+    while i < n:
+        c = sql[i]
+        if c == "'":
+            current.append(c)
+            i += 1
+            while i < n:
+                c2 = sql[i]
+                current.append(c2)
+                if c2 == "'":
+                    if i + 1 < n and sql[i + 1] == "'":
+                        current.append("'")
+                        i += 2
+                        continue
+                    else:
+                        i += 1
+                        break
+                i += 1
+        elif c == ";":
+            stmt = "".join(current).strip()
+            if stmt:
+                stmts.append(stmt)
+            current = []
+            i += 1
+        else:
+            current.append(c)
+            i += 1
+    stmt = "".join(current).strip()
+    if stmt:
+        stmts.append(stmt)
+    return stmts
+
+
 def _execute_ddl_on_postgresql(engine) -> None:
     """
     Create all tables on a PostgreSQL database using the native DDL file.
@@ -163,7 +201,7 @@ def _execute_ddl_on_postgresql(engine) -> None:
     ddl_sql = re.sub(r'--[^\n]*', '', ddl_sql)
 
     with engine.connect() as conn:
-        statements = [s.strip() for s in ddl_sql.split(";")]
+        statements = _split_sql_statements(ddl_sql)
         for stmt in statements:
             stmt = stmt.strip()
             if not stmt or stmt.startswith("--") or stmt.startswith("/*"):
