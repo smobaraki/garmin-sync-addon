@@ -1,5 +1,5 @@
 name: Garmin Sync
-version: "1.0.0"
+version: "1.0.1"
 slug: garmin-sync
 description: >
   Syncs Garmin Connect health data to PostgreSQL. Runs the full ETL pipeline
@@ -20,6 +20,7 @@ options:
   garmin_token_json: ""
   database_url: ""
   sync_interval_min: 30
+  start_date: ""
   data_types: ""
 schema:
   garmin_email: str
@@ -27,4 +28,5 @@ schema:
   garmin_token_json: str
   database_url: str
   sync_interval_min: int(5,1440)
+  start_date: str
   data_types: str
