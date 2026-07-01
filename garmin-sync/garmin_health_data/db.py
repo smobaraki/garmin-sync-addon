@@ -226,13 +226,35 @@ def _execute_ddl_on_postgresql(engine) -> None:
     # existing rows because the sequence starts at 1.
     #
     # Step 1: add IDENTITY if the column was created as bare INTEGER
-    # (from earlier Base.metadata.create_all() runs).
+    # (from earlier Base.metadata.create_all() runs).  First drop any
+    # leftover SERIAL default / sequence so the ALTER succeeds on
+    # databases migrated from old SERIAL-based DDL.
     _fix_identity_columns = {
         "user_profile": "user_profile_id",
         "sleep": "sleep_id",
     }
     for table_name, col_name in _fix_identity_columns.items():
         with engine.connect() as c:
+            try:
+                c.execute(
+                    text(
+                        f'ALTER TABLE "{table_name}" '
+                        f'ALTER COLUMN "{col_name}" DROP DEFAULT'
+                    )
+                )
+                c.commit()
+            except Exception:
+                c.rollback()
+            try:
+                c.execute(
+                    text(
+                        f'DROP SEQUENCE IF EXISTS '
+                        f'{table_name}_{col_name}_seq'
+                    )
+                )
+                c.commit()
+            except Exception:
+                c.rollback()
             try:
                 c.execute(
                     text(

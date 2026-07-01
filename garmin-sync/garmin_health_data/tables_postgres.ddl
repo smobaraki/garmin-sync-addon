@@ -49,7 +49,7 @@ COMMENT ON COLUMN "user".create_ts IS
 -- User profile table containing fitness metrics and physical characteristics.
 CREATE TABLE IF NOT EXISTS user_profile (
     -- Record identification.
-    user_profile_id SERIAL PRIMARY KEY
+    user_profile_id INTEGER NOT NULL PRIMARY KEY
     , user_id BIGINT NOT NULL REFERENCES "user" (user_id)
 
     -- Physical characteristics.
@@ -776,7 +776,7 @@ COMMENT ON COLUMN supplemental_activity_metric.update_ts IS
 -- Sleep session data with comprehensive sleep analysis metrics.
 CREATE TABLE IF NOT EXISTS sleep (
     -- Auto-generated primary key.
-    sleep_id SERIAL PRIMARY KEY
+    sleep_id INTEGER NOT NULL PRIMARY KEY
 
     -- Foreign key reference.
     , user_id BIGINT NOT NULL REFERENCES "user" (user_id)
