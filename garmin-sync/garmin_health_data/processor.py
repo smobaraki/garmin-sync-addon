@@ -371,15 +371,7 @@ class GarminProcessor(Processor):
         )
 
         if not existing_user:
-            # Create minimal user record with conflict handling.
-            session.execute(
-                text(
-                    "INSERT INTO user (user_id, full_name, birth_date) "
-                    "VALUES (:user_id, NULL, NULL) "
-                    "ON CONFLICT (user_id) DO NOTHING"
-                ),
-                {"user_id": int(user_id)},
-            )
+            session.add(User(user_id=int(user_id)))
             session.flush()
             self.must_update_user = True
             click.echo(

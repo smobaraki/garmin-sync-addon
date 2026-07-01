@@ -1,0 +1,51 @@
+Metadata-Version: 2.4
+Name: garmin-health-data
+Version: 2.11.2
+Summary: Download Garmin Connect health data as local files and load it into a SQLite or PostgreSQL database for analysis
+Author: Diego Scarabelli
+License-Expression: Apache-2.0
+Project-URL: Homepage, https://github.com/diegoscarabelli/garmin-health-data
+Project-URL: Documentation, https://github.com/diegoscarabelli/garmin-health-data#readme
+Project-URL: Repository, https://github.com/diegoscarabelli/garmin-health-data
+Project-URL: Issues, https://github.com/diegoscarabelli/garmin-health-data/issues
+Project-URL: Changelog, https://github.com/diegoscarabelli/garmin-health-data/blob/main/CHANGELOG.md
+Keywords: garmin,health,data,wellness,fitness,sqlite,garmin-connect
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: Operating System :: OS Independent
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Database
+Classifier: Topic :: Utilities
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.0
+Requires-Dist: sqlalchemy>=2.0
+Requires-Dist: curl-cffi>=0.7
+Requires-Dist: requests>=2.28
+Requires-Dist: ua-generator>=1.0
+Requires-Dist: fitdecode>=0.10.0
+Requires-Dist: pendulum>=2.1.0
+Requires-Dist: colorama>=0.4.6
+Requires-Dist: packaging>=21.0
+Requires-Dist: defusedxml>=0.7.1
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: pytest-env>=1.0; extra == "dev"
+Requires-Dist: python-dotenv>=1.0; extra == "dev"
+Requires-Dist: black==25.9.0; extra == "dev"
+Requires-Dist: autoflake>=2.0; extra == "dev"
+Requires-Dist: docformatter>=1.7; extra == "dev"
+Requires-Dist: sqlfluff>=2.0; extra == "dev"
+Requires-Dist: pre-commit>=3.0; extra == "dev"
+Requires-Dist: flake8>=6.0; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Provides-Extra: postgres
+Requires-Dist: psycopg2-binary>=2.9; extra == "postgres"
