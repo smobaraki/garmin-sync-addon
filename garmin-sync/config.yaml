@@ -1,9 +1,9 @@
 name: Garmin Sync
-version: "1.1.0"
+version: "1.1.1"
 slug: garmin-sync
 description: >
-  Syncs Garmin Connect health data to PostgreSQL. Choose mode:
-  routine (today only), backfill (date range), or auth (login).
+  Syncs Garmin Connect health data to PostgreSQL. Set mode to
+  routine, backfill, or auth. backfill_start only used in backfill mode.
 arch:
   - aarch64
   - amd64
@@ -27,7 +27,7 @@ schema:
   garmin_password: password
   garmin_token_json: str
   database_url: str
-  mode: list(routine|backfill|auth)
+  mode: str
   sync_interval_min: int(5,1440)
   backfill_start: str
   data_types: str
