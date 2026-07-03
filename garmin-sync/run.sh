@@ -3,6 +3,7 @@ set -euo pipefail
 
 OPTIONS=/data/options.json
 STATE_FILE=/data/.garmin_sync_initialized
+BACKFILL_FILE=/data/.garmin_sync_backfill_done
 
 export GARMIN_EMAIL=$(jq -r '.garmin_email // empty' "$OPTIONS")
 export GARMIN_USERNAME="$GARMIN_EMAIL"
@@ -32,12 +33,12 @@ case "$MODE" in
     exit 0
     ;;
   backfill)
-    if [ ! -f "$STATE_FILE" ] && [ -n "$BACKFILL_START" ] && [ "$BACKFILL_START" != "null" ]; then
+    if [ ! -f "$BACKFILL_FILE" ] && [ -n "$BACKFILL_START" ] && [ "$BACKFILL_START" != "null" ]; then
       ARGS="--start-date $BACKFILL_START --end-date $TODAY"
       echo "=== Backfill mode — $BACKFILL_START → $TODAY ==="
     else
       ARGS="--start-date $TODAY --end-date $TODAY"
-      echo "=== Backfill complete — routine sync for $TODAY ==="
+      echo "=== Backfill already completed — routine sync for $TODAY ==="
     fi
     ;;
   *)
@@ -59,10 +60,13 @@ while true; do
   python -m garmin_health_data.cli extract $ARGS
   touch "$STATE_FILE"
 
-  if [ "$MODE" = "backfill" ] && [ ! -f "$STATE_FILE.bak" ]; then
-    cp "$STATE_FILE" "$STATE_FILE.bak"
+  if [ "$MODE" = "backfill" ] && [ ! -f "$BACKFILL_FILE" ] && [ -n "$BACKFILL_START" ] && [ "$BACKFILL_START" != "null" ]; then
+    touch "$BACKFILL_FILE"
     ARGS="--start-date $TODAY --end-date $TODAY"
-    echo "[$(date -Iseconds)] Backfill complete. Switching to routine sync for $TODAY."
+    echo "[$(date -Iseconds)] Backfill complete. Now syncing $TODAY only."
+    if [ -n "$DATA_TYPES" ] && [ "$DATA_TYPES" != "null" ]; then
+      ARGS="$ARGS --data-types $DATA_TYPES"
+    fi
   fi
 
   echo "[$(date -Iseconds)] Sync done. Sleeping ${INTERVAL} min..."
