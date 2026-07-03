@@ -1,10 +1,9 @@
 name: Garmin Sync
-version: "1.0.1"
+version: "1.1.0"
 slug: garmin-sync
 description: >
-  Syncs Garmin Connect health data to PostgreSQL. Runs the full ETL pipeline
-  every N minutes — sleep, heart rate, HRV, stress, body battery, steps,
-  respiration, floors, SpO2, activities, training readiness, and more.
+  Syncs Garmin Connect health data to PostgreSQL. Choose mode:
+  routine (today only), backfill (date range), or auth (login).
 arch:
   - aarch64
   - amd64
@@ -19,14 +18,16 @@ options:
   garmin_password: ""
   garmin_token_json: ""
   database_url: ""
+  mode: routine
   sync_interval_min: 30
-  start_date: ""
+  backfill_start: ""
   data_types: ""
 schema:
   garmin_email: str
   garmin_password: password
   garmin_token_json: str
   database_url: str
+  mode: list(routine|backfill|auth)
   sync_interval_min: int(5,1440)
-  start_date: str
+  backfill_start: str
   data_types: str

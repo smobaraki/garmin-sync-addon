@@ -8,8 +8,9 @@ export GARMIN_EMAIL=$(jq -r '.garmin_email // empty' "$OPTIONS")
 export GARMIN_USERNAME="$GARMIN_EMAIL"
 export GARMIN_PASSWORD=$(jq -r '.garmin_password // empty' "$OPTIONS")
 export DATABASE_URL=$(jq -r '.database_url // empty' "$OPTIONS")
+MODE=$(jq -r '.mode // "routine"' "$OPTIONS")
 INTERVAL=$(jq -r '.sync_interval_min // 30' "$OPTIONS")
-START_DATE=$(jq -r '.start_date // empty' "$OPTIONS")
+BACKFILL_START=$(jq -r '.backfill_start // empty' "$OPTIONS")
 DATA_TYPES=$(jq -r '.data_types // empty' "$OPTIONS")
 
 TOKEN_JSON=$(jq -r '.garmin_token_json // empty' "$OPTIONS")
@@ -22,13 +23,28 @@ mkdir -p "$GARMIN_TOKEN_DIR"
 
 TODAY=$(date +%Y-%m-%d)
 
-if [ -n "$START_DATE" ] && [ "$START_DATE" != "null" ] && [ ! -f "$STATE_FILE" ]; then
-  ARGS="--start-date $START_DATE --end-date $TODAY"
-  echo "=== First run — backfilling from $START_DATE to $TODAY ==="
-else
-  ARGS="--start-date $TODAY --end-date $TODAY"
-  echo "=== Routine sync for $TODAY ==="
-fi
+case "$MODE" in
+  auth)
+    echo "=== Auth mode — logging in and saving tokens ==="
+    python -m garmin_health_data.cli auth
+    echo "Tokens saved to /data/.garminconnect/"
+    echo "Copy token content into garmin_token_json field, then switch mode to routine."
+    exit 0
+    ;;
+  backfill)
+    if [ ! -f "$STATE_FILE" ] && [ -n "$BACKFILL_START" ] && [ "$BACKFILL_START" != "null" ]; then
+      ARGS="--start-date $BACKFILL_START --end-date $TODAY"
+      echo "=== Backfill mode — $BACKFILL_START → $TODAY ==="
+    else
+      ARGS="--start-date $TODAY --end-date $TODAY"
+      echo "=== Backfill complete — routine sync for $TODAY ==="
+    fi
+    ;;
+  *)
+    ARGS="--start-date $TODAY --end-date $TODAY"
+    echo "=== Routine mode — syncing $TODAY ==="
+    ;;
+esac
 
 if [ -n "$DATA_TYPES" ] && [ "$DATA_TYPES" != "null" ]; then
   ARGS="$ARGS --data-types $DATA_TYPES"
@@ -42,6 +58,13 @@ while true; do
   echo "[$(date -Iseconds)] Running ETL..."
   python -m garmin_health_data.cli extract $ARGS
   touch "$STATE_FILE"
+
+  if [ "$MODE" = "backfill" ] && [ ! -f "$STATE_FILE.bak" ]; then
+    cp "$STATE_FILE" "$STATE_FILE.bak"
+    ARGS="--start-date $TODAY --end-date $TODAY"
+    echo "[$(date -Iseconds)] Backfill complete. Switching to routine sync for $TODAY."
+  fi
+
   echo "[$(date -Iseconds)] Sync done. Sleeping ${INTERVAL} min..."
   sleep $((INTERVAL * 60))
 done
