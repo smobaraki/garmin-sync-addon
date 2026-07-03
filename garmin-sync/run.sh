@@ -20,32 +20,22 @@ fi
 export GARMIN_TOKEN_DIR=/data/.garminconnect
 mkdir -p "$GARMIN_TOKEN_DIR"
 
-ARGS=""
-if [ -n "$DATA_TYPES" ] && [ "$DATA_TYPES" != "null" ]; then
-  ARGS="--data-types $DATA_TYPES"
-fi
+TODAY=$(date +%Y-%m-%d)
 
 if [ -n "$START_DATE" ] && [ "$START_DATE" != "null" ] && [ ! -f "$STATE_FILE" ]; then
-  ARGS="$ARGS --start-date $START_DATE"
+  ARGS="--start-date $START_DATE --end-date $TODAY"
+  echo "=== First run — backfilling from $START_DATE to $TODAY ==="
+else
+  ARGS="--start-date $TODAY --end-date $TODAY"
+  echo "=== Routine sync for $TODAY ==="
 fi
 
-echo "=== Garmin Sync Addon ==="
+if [ -n "$DATA_TYPES" ] && [ "$DATA_TYPES" != "null" ]; then
+  ARGS="$ARGS --data-types $DATA_TYPES"
+fi
+
 echo "Interval: ${INTERVAL} min"
 echo "DB: ${DATABASE_URL%%@*}@***"
-if [ -n "$START_DATE" ] && [ "$START_DATE" != "null" ]; then
-  if [ -f "$STATE_FILE" ]; then
-    echo "Start date: done (initial full sync already completed)"
-  else
-    echo "Start date: $START_DATE (first run — full history sync)"
-  fi
-else
-  echo "Start date: auto"
-fi
-if [ -n "$DATA_TYPES" ] && [ "$DATA_TYPES" != "null" ]; then
-  echo "Types: $DATA_TYPES"
-else
-  echo "Types: ALL"
-fi
 echo ""
 
 while true; do
