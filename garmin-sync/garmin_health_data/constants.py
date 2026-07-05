@@ -231,6 +231,15 @@ class GarminDataRegistry:
                 "rate).",
                 "👤",
             ),
+            GarminDataType(
+                "GEAR",
+                "get_gear",
+                APIMethodTimeParam.NO_DATE,
+                "/gear-service/gear/filterGear?userProfilePk={user_profile_pk}",
+                "User-registered gear (shoes, bikes, and other equipment): make, "
+                "model, type, status, usage limit, and begin/end dates.",
+                "⚙️",
+            ),
             # Per-Activity Data - Activity ID parameter: get_method(activity_id).
             # Iterated per activity (not per calendar date) by
             # ``GarminExtractor.extract_fit_activities``, which sources the activity

@@ -964,6 +964,12 @@ class GarminClient:
         """
         return api.get_user_profile(self)
 
+    def get_gear(self) -> List[Dict[str, Any]]:
+        """
+        See :func:`api.get_gear`.
+        """
+        return api.get_gear(self)
+
     def download_activity(
         self,
         activity_id: Any,

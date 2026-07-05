@@ -886,6 +886,32 @@ class RacePredictions(Base, InsertBase):
     latest = Column(Boolean, nullable=False, default=False)
 
 
+class Gear(Base, UpsertBase):
+    """
+    Gear (shoes, bikes, and other equipment) registered by the user in Garmin Connect.
+
+    One row per ``(user_id, uuid)``; usage stats and status are upserted in place on
+    each sync so the row reflects the current state of the gear item.
+    """
+
+    __tablename__ = "gear"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    uuid = Column(String, primary_key=True)
+    gear_pk = Column(BigInteger)
+    gear_make_name = Column(String)
+    gear_model_name = Column(String)
+    custom_make_model = Column(String)
+    gear_type_name = Column(String)
+    gear_status_name = Column(String)
+    display_name = Column(String)
+    maximum_meters = Column(Float)
+    date_begin = Column(DateTime)
+    date_end = Column(DateTime)
+    create_date = Column(DateTime)
+    update_date = Column(DateTime)
+
+
 class StrengthExercise(Base, UpsertBase):
     """
     Strength training per-exercise aggregates from summarizedExerciseSets.

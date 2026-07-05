@@ -122,6 +122,10 @@ RACE_PREDICTOR_URL = "/metrics-service/metrics/racepredictions"
 # Personal records.
 PERSONAL_RECORD_URL = "/personalrecord-service/personalrecord/prs"
 
+# Gear (shoes, bikes, etc.). Filtered by the numeric user profile PK, passed as
+# the ``userProfilePk`` query parameter rather than in the path.
+GEAR_URL = "/gear-service/gear/filterGear"
+
 # Menstrual cycle (periodic health). Calendar enforces a hard 92-day max range
 # per request; the API wrapper paginates internally for longer windows.
 MENSTRUAL_DAYVIEW_URL = "/periodichealth-service/menstrualcycle/dayview"

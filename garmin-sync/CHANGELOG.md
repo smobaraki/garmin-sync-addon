@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Feature: fetch and store Garmin **gear** (shoes, bikes, and other equipment).
+  Adds a `GEAR` data type, the `/gear-service/gear/filterGear` endpoint, and a new
+  `gear` table (make, model, type, status, usage limit, begin/end dates). The table
+  is created automatically on the next sync.
+
 ## 1.1.3
 
 - Fix: recompute the sync date on every loop iteration so routine mode always

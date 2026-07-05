@@ -35,6 +35,7 @@ from .constants import (
     DAILY_STRESS_URL,
     FIT_DOWNLOAD_URL,
     FLOORS_CHART_DAILY_URL,
+    GEAR_URL,
     GPX_DOWNLOAD_URL,
     HEART_RATES_DAILY_URL,
     KML_DOWNLOAD_URL,
@@ -532,6 +533,30 @@ def get_user_profile(client: "GarminClient") -> Dict[str, Any]:
         birthday, and threshold metrics.
     """
     return client._connectapi(USER_SETTINGS_URL)
+
+
+def get_gear(client: "GarminClient") -> List[Dict[str, Any]]:
+    """
+    Fetch the authenticated user's gear (shoes, bikes, and other equipment).
+
+    The gear endpoint is filtered by the numeric user profile PK (``userProfilePk``),
+    not the ``display_name`` GUID used by most other user-scoped endpoints. The PK is
+    resolved from the user settings payload (the same ``id`` the extractor already uses
+    as the account ``user_id``).
+
+    :param client: GarminClient instance.
+    :return: List of gear dictionaries (make, model, type, status, usage limits, and
+        begin/end dates). Empty list when the user has no gear registered.
+    :raises ValueError: If the user profile PK cannot be resolved.
+    """
+    profile = client._connectapi(USER_SETTINGS_URL)
+    profile_pk = profile.get("id") if profile else None
+    if not profile_pk:
+        raise ValueError("could not resolve userProfilePk for gear lookup")
+    response = client._connectapi(GEAR_URL, params={"userProfilePk": profile_pk})
+    if response is None:
+        return []
+    return response
 
 
 # ----------------------------------------------------------------------------------------

@@ -43,6 +43,7 @@ from garmin_health_data.models import (
     BreathingDisruption,
     CyclingAggMetrics,
     Floors,
+    Gear,
     HeartRate,
     HRV,
     IntensityMinutes,
@@ -173,6 +174,7 @@ class GarminProcessor(Processor):
         file_processors = OrderedDict(
             [
                 ("USER_PROFILE", self._process_user_profile),
+                ("GEAR", self._process_gear),
                 ("ACTIVITIES_LIST", self._process_activities),
                 ("EXERCISE_SETS", self._process_exercise_sets),
                 ("BODY_COMPOSITION", self._process_body_composition),
@@ -2809,6 +2811,80 @@ class GarminProcessor(Processor):
             conflict_columns=["user_id", "date"],
             on_conflict_update=False,
         )
+
+    def _process_gear(self, file_path: Path, session: Session):
+        """
+        Process a GEAR file containing the user's registered equipment.
+
+        Extracts one row per gear item (shoes, bikes, etc.) and upserts them into the
+        ``gear`` table keyed by ``(user_id, uuid)``. Mutable fields (status, usage limit,
+        end date, display name) are updated in place on each sync, so a single row
+        tracks the current state of each gear item rather than accumulating snapshots.
+
+        :param file_path: Path to the GEAR JSON file.
+        :param session: SQLAlchemy Session object.
+        """
+        gear_data = self._load_json_file(file_path)
+
+        if not gear_data:
+            click.secho("⚠️ No gear data found.", fg="yellow")
+            return
+
+        gear_records = []
+        for item in gear_data:
+            uuid = item.get("uuid")
+            if not uuid:
+                # uuid is the natural key; skip malformed entries rather than
+                # letting a NULL primary key blow up the whole file set.
+                click.secho(
+                    "⚠️ Skipping gear entry with no uuid.", fg="yellow"
+                )
+                continue
+
+            gear_records.append(
+                Gear(
+                    user_id=int(self.user_id),
+                    uuid=uuid,
+                    gear_pk=item.get("gearPk"),
+                    gear_make_name=item.get("gearMakeName"),
+                    gear_model_name=item.get("gearModelName"),
+                    custom_make_model=item.get("customMakeModel"),
+                    gear_type_name=item.get("gearTypeName"),
+                    gear_status_name=item.get("gearStatusName"),
+                    display_name=item.get("displayName"),
+                    maximum_meters=item.get("maximumMeters"),
+                    date_begin=self._parse_gear_datetime(item.get("dateBegin")),
+                    date_end=self._parse_gear_datetime(item.get("dateEnd")),
+                    create_date=self._parse_gear_datetime(item.get("createDate")),
+                    update_date=self._parse_gear_datetime(item.get("updateDate")),
+                )
+            )
+
+        if gear_records:
+            upsert_model_instances(
+                session=session,
+                model_instances=gear_records,
+                conflict_columns=["user_id", "uuid"],
+                on_conflict_update=True,
+            )
+            click.echo(f"Processed {len(gear_records)} gear records.")
+        else:
+            click.secho("⚠️ No gear data found.", fg="yellow")
+
+    def _parse_gear_datetime(self, ts_str: Optional[str]) -> Optional[datetime]:
+        """
+        Parse a Garmin gear timestamp string into a naive datetime, tolerating None.
+
+        Gear timestamps arrive as ISO 8601-like strings (e.g. ``"2024-01-01T00:00:00.0"``)
+        and are frequently null (e.g. ``dateEnd`` for active gear), so this wraps
+        :meth:`_parse_garmin_iso` with a None guard.
+
+        :param ts_str: ISO 8601-like timestamp string, or None.
+        :return: Parsed naive datetime, or None when the input is falsy.
+        """
+        if not ts_str:
+            return None
+        return self._parse_garmin_iso(ts_str)
 
     def _persist_activity_metrics(
         self,
