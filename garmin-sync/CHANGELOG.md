@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0
+
+- Feature: sync interval can now be set in **seconds** via `sync_interval_sec`
+  (floor 60s, default 90s), which overrides the minute-based `sync_interval_min`.
+  Enables sub-5-minute syncing. Note: routine sync re-fetches every data type each
+  cycle, so frequent syncing multiplies the Garmin API call volume — watch the log
+  for HTTP 429 (rate limiting).
+
 ## 1.3.0
 
 - Feature (full-mirror phase 1): fetch and store **naps** and core daily-health

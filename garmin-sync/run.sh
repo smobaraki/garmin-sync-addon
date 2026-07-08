@@ -10,8 +10,21 @@ export GARMIN_PASSWORD=$(jq -r '.garmin_password // empty' "$OPTIONS")
 export DATABASE_URL=$(jq -r '.database_url // empty' "$OPTIONS")
 MODE=$(jq -r '.mode // "routine"' "$OPTIONS")
 INTERVAL=$(jq -r '.sync_interval_min // 30' "$OPTIONS")
+SYNC_SEC=$(jq -r '.sync_interval_sec // empty' "$OPTIONS")
 BACKFILL_START=$(jq -r '.backfill_start // empty' "$OPTIONS")
 DATA_TYPES=$(jq -r '.data_types // empty' "$OPTIONS")
+
+# Resolve the sleep interval in seconds. sync_interval_sec (when set) wins over
+# the minute-based sync_interval_min. A hard 60s floor is enforced here as a
+# safety net, independent of the Home Assistant schema validation.
+if [ -n "$SYNC_SEC" ] && [ "$SYNC_SEC" != "null" ]; then
+  SLEEP_SECONDS="$SYNC_SEC"
+else
+  SLEEP_SECONDS=$((INTERVAL * 60))
+fi
+if [ "$SLEEP_SECONDS" -lt 60 ]; then
+  SLEEP_SECONDS=60
+fi
 
 TOKEN_JSON=$(jq -r '.garmin_token_json // empty' "$OPTIONS")
 if [ -n "$TOKEN_JSON" ] && [ "$TOKEN_JSON" != "null" ]; then
@@ -60,7 +73,7 @@ case "$MODE" in
     ;;
 esac
 
-echo "Interval: ${INTERVAL} min"
+echo "Interval: ${SLEEP_SECONDS}s"
 echo "DB: ${DATABASE_URL%%@*}@***"
 echo ""
 
@@ -86,6 +99,6 @@ while true; do
     echo "[$(date -Iseconds)] Backfill done. Switching to routine sync."
   fi
 
-  echo "[$(date -Iseconds)] Sync done. Sleeping ${INTERVAL} min..."
-  sleep $((INTERVAL * 60))
+  echo "[$(date -Iseconds)] Sync done. Sleeping ${SLEEP_SECONDS}s..."
+  sleep "$SLEEP_SECONDS"
 done

@@ -1,9 +1,11 @@
 name: Garmin Sync
-version: "1.3.0"
+version: "1.4.0"
 slug: garmin-sync
 description: >
   Syncs Garmin Connect health data to PostgreSQL. Set mode to
   routine, backfill, or auth. backfill_start only used in backfill mode.
+  Sync interval can be set in seconds (sync_interval_sec, floor 60s) which
+  overrides sync_interval_min.
 arch:
   - aarch64
   - amd64
@@ -20,6 +22,7 @@ options:
   database_url: ""
   mode: routine
   sync_interval_min: 30
+  sync_interval_sec: 90
   backfill_start: ""
   data_types: ""
 schema:
@@ -29,5 +32,6 @@ schema:
   database_url: str
   mode: str
   sync_interval_min: int(5,1440)
+  sync_interval_sec: int(60,86400)
   backfill_start: str
   data_types: str
