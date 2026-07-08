@@ -112,6 +112,7 @@ FLOORS_CHART_DAILY_URL = "/wellness-service/wellness/floorsChartData/daily"
 DAILY_INTENSITY_MINUTES_URL = "/wellness-service/wellness/daily/im"
 DAILY_EVENTS_URL = "/wellness-service/wellness/dailyEvents"
 DAILY_SPO2_URL = "/wellness-service/wellness/daily/spo2"
+BODY_BATTERY_EVENTS_URL = "/wellness-service/wellness/bodyBattery/events"
 
 # Daily rollups / wellness stats (Phase 1: full-mirror daily health).
 DAILY_SUMMARY_URL = "/usersummary-service/usersummary/daily"

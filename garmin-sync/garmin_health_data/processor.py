@@ -39,6 +39,7 @@ from garmin_health_data.models import (
     ActivitySplitMetric,
     ActivityTsMetric,
     BodyBattery,
+    BodyBatteryEvent,
     BodyComposition,
     BreathingDisruption,
     CyclingAggMetrics,
@@ -192,6 +193,7 @@ class GarminProcessor(Processor):
                 ("HEART_RATE", self._process_heart_rate),
                 ("INTENSITY_MINUTES", self._process_intensity_minutes),
                 ("DAILY_EVENTS", self._process_daily_events),
+                ("BODY_BATTERY_EVENTS", self._process_body_battery_events),
                 ("DAILY_SUMMARY", self._process_daily_summary),
                 ("HRV", self._process_hrv_daily),
                 ("RESTING_HR", self._process_resting_hr),
@@ -3005,13 +3007,11 @@ class GarminProcessor(Processor):
 
     def _process_daily_events(self, file_path: Path, session: Session):
         """
-        Process a DAILY_EVENTS file and extract nap events into the ``nap`` table.
+        Process a DAILY_EVENTS file and store the raw payload.
 
-        The feed lists discrete daily events (naps, sleep, activities); this filters
-        for nap events and stores their start/end/duration. Parsing is defensive
-        because the feed's exact shape is not fixed; the raw event is preserved in
-        ``nap.raw`` and the full source file is archived, so unrecognised shapes can
-        be refined later without data loss.
+        The daily events feed carries auto-detected activities (not naps — naps come
+        from the body battery events feed, see :meth:`_process_body_battery_events`).
+        The full payload is preserved in the ``daily_events`` table.
 
         :param file_path: Path to the DAILY_EVENTS JSON file.
         :param session: SQLAlchemy Session object.
@@ -3021,82 +3021,107 @@ class GarminProcessor(Processor):
             click.secho("⚠️ No daily events data found.", fg="yellow")
             return
 
-        calendar_date = self._resolve_daily_date(data, file_path)
-
-        # Always persist the full raw payload so naps can be verified/refined
-        # against real data and nothing is lost when an event shape is not
-        # recognised by the nap parser below.
         self._upsert_daily(
             DailyEvents(
                 user_id=int(self.user_id),
-                calendar_date=calendar_date,
+                calendar_date=self._resolve_daily_date(data, file_path),
                 raw=data,
             ),
             session,
         )
+        click.echo("Processed daily events.")
 
+    def _process_body_battery_events(self, file_path: Path, session: Session):
+        """
+        Process a BODY_BATTERY_EVENTS file: store every event and extract naps.
+
+        Each event carries a nested ``event`` object with ``eventType`` (SLEEP,
+        STRESS, NAP, ACTIVITY, ...), ``eventStartTimeGmt``, ``durationInMilliseconds``,
+        and body-battery impact. Every event is written to ``body_battery_event``;
+        events with ``eventType == "NAP"`` are additionally written to ``nap``.
+
+        :param file_path: Path to the BODY_BATTERY_EVENTS JSON file.
+        :param session: SQLAlchemy Session object.
+        """
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No body battery events data found.", fg="yellow")
+            return
+
+        calendar_date = self._resolve_daily_date(data, file_path)
+        events = data if isinstance(data, list) else self._extract_events(data)
+
+        bb_events = []
         naps = []
-        for ev in self._extract_events(data):
+        for ev in events:
             if not isinstance(ev, dict):
                 continue
-            blob = " ".join(
-                str(ev.get(k, ""))
-                for k in (
-                    "eventType",
-                    "activityType",
-                    "type",
-                    "name",
-                    "wellnessEventType",
-                )
-            ).lower()
-            if "nap" not in blob:
-                continue
+            inner = ev.get("event") or {}
+            event_type = inner.get("eventType")
             start = self._coerce_event_ts(
-                ev,
-                (
-                    "startTimeGmt",
-                    "startTimestampGmt",
-                    "startTimeGMT",
-                    "startGmt",
-                    "startTimeLocal",
-                    "startTimestampLocal",
-                ),
+                inner, ("eventStartTimeGmt", "eventStartTimeGMT", "startTimeGmt")
             )
             if start is None:
                 continue
-            end = self._coerce_event_ts(
-                ev,
-                (
-                    "endTimeGmt",
-                    "endTimestampGmt",
-                    "endTimeGMT",
-                    "endGmt",
-                    "endTimeLocal",
-                    "endTimestampLocal",
-                ),
-            )
-            dur = (
-                ev.get("durationInSeconds")
-                or ev.get("durationSeconds")
-                or ev.get("duration")
-            )
+
+            dur_ms = inner.get("durationInMilliseconds")
             try:
-                dur = int(dur) if dur is not None else None
+                dur_seconds = int(dur_ms / 1000) if dur_ms is not None else None
             except (TypeError, ValueError):
-                dur = None
-            naps.append(
-                Nap(
+                dur_seconds = None
+            end = (
+                start + timedelta(seconds=dur_seconds)
+                if dur_seconds is not None
+                else None
+            )
+            bb_impact = inner.get("bodyBatteryImpact")
+            feedback_type = inner.get("feedbackType")
+            short_feedback = inner.get("shortFeedback")
+            average_stress = ev.get("averageStress")
+
+            bb_events.append(
+                BodyBatteryEvent(
                     user_id=int(self.user_id),
-                    start_ts=start,
-                    end_ts=end,
+                    event_start_ts=start,
+                    event_type=event_type or "UNKNOWN",
                     calendar_date=calendar_date,
-                    duration_seconds=dur,
-                    event_type=ev.get("eventType") or ev.get("type"),
+                    duration_seconds=dur_seconds,
+                    body_battery_impact=bb_impact,
+                    feedback_type=feedback_type,
+                    short_feedback=short_feedback,
+                    average_stress=average_stress,
+                    activity_name=ev.get("activityName"),
                     activity_type=ev.get("activityType"),
+                    activity_id=ev.get("activityId"),
                     raw=ev,
                 )
             )
 
+            if (event_type or "").upper() == "NAP":
+                naps.append(
+                    Nap(
+                        user_id=int(self.user_id),
+                        start_ts=start,
+                        end_ts=end,
+                        calendar_date=calendar_date,
+                        duration_seconds=dur_seconds,
+                        event_type=event_type,
+                        activity_type=ev.get("activityType"),
+                        body_battery_impact=bb_impact,
+                        feedback_type=feedback_type,
+                        short_feedback=short_feedback,
+                        average_stress=average_stress,
+                        raw=ev,
+                    )
+                )
+
+        if bb_events:
+            upsert_model_instances(
+                session=session,
+                model_instances=bb_events,
+                conflict_columns=["user_id", "event_start_ts", "event_type"],
+                on_conflict_update=True,
+            )
         if naps:
             upsert_model_instances(
                 session=session,
@@ -3104,9 +3129,11 @@ class GarminProcessor(Processor):
                 conflict_columns=["user_id", "start_ts"],
                 on_conflict_update=True,
             )
-            click.echo(f"Processed {len(naps)} nap event(s).")
-        else:
-            click.echo("No nap events found in daily events.")
+        click.echo(
+            f"Processed {len(bb_events)} body battery event(s), "
+            f"{len(naps)} nap(s)."
+        )
+
 
     def _process_daily_summary(self, file_path: Path, session: Session):
         """Process a DAILY_SUMMARY file into the ``daily_summary`` table."""

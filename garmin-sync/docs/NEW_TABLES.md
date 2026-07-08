@@ -37,20 +37,51 @@ PostgreSQL database. New tables are created automatically on the next sync
 Each table below lists its source Garmin endpoint (the pipeline data-type name in
 parentheses).
 
-### `nap` — individual naps (v1.3.0)
-Source: `/wellness-service/wellness/dailyEvents?calendarDate=` (`DAILY_EVENTS`)
+### `nap` — individual naps (v1.3.0, source fixed in v1.5.0)
+Source: `/wellness-service/wellness/bodyBattery/events/{date}` (`BODY_BATTERY_EVENTS`),
+filtered to `event.eventType == "NAP"`.
 
 | column | type | note |
 |---|---|---|
 | user_id | bigint | PK, FK `user.user_id` |
-| start_ts | timestamptz | PK |
-| end_ts | timestamptz | |
+| start_ts | timestamptz | PK (`event.eventStartTimeGmt`, UTC) |
+| end_ts | timestamptz | start + duration |
 | calendar_date | date | |
-| duration_seconds | integer | |
-| event_type | varchar | |
+| duration_seconds | integer | from `durationInMilliseconds` / 1000 |
+| event_type | varchar | always `NAP` |
 | activity_type | varchar | |
+| body_battery_impact | integer | body battery gained/lost |
+| feedback_type | varchar | e.g. `NAP_RECOVERING_BODY_BATTERY_INCREASE` |
+| short_feedback | varchar | e.g. `RESTFUL_NAP` |
+| average_stress | double precision | |
 | raw | json | full source event |
 | create_ts, update_ts | timestamp | |
+
+### `body_battery_event` — all body battery events (v1.5.0)
+Source: `/wellness-service/wellness/bodyBattery/events/{date}` (`BODY_BATTERY_EVENTS`)
+PK `(user_id, event_start_ts, event_type)`. One row per event; `event_type` is one of
+`SLEEP`, `STRESS`, `NAP`, `ACTIVITY`, etc. (`nap` is the `NAP` subset).
+
+| column | type | note |
+|---|---|---|
+| user_id | bigint | PK, FK `user.user_id` |
+| event_start_ts | timestamptz | PK (UTC) |
+| event_type | varchar | PK |
+| calendar_date | date | |
+| duration_seconds | integer | |
+| body_battery_impact | integer | |
+| feedback_type | varchar | |
+| short_feedback | varchar | |
+| average_stress | double precision | |
+| activity_name, activity_type | varchar | |
+| activity_id | bigint | |
+| raw | json | full source event (excl. time-series arrays are kept in raw) |
+| create_ts, update_ts | timestamp | |
+
+### `daily_events` — auto-detected daily events (v1.4.1)
+Source: `/wellness-service/wellness/dailyEvents?calendarDate=` (`DAILY_EVENTS`)
+PK `(user_id, calendar_date)`. Raw payload of auto-detected activities (not naps).
+Columns: `user_id`, `calendar_date`, `raw` (json), `create_ts`, `update_ts`.
 
 ### `daily_summary` — all-day dashboard rollup (v1.3.0)
 Source: `/usersummary-service/usersummary/daily/{display_name}?calendarDate=` (`DAILY_SUMMARY`)

@@ -905,6 +905,12 @@ class GarminClient:
         """
         return api.get_daily_events(self, cdate)
 
+    def get_body_battery_events(self, cdate: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        See :func:`api.get_body_battery_events`.
+        """
+        return api.get_body_battery_events(self, cdate)
+
     def get_daily_summary(self, cdate: str) -> Optional[Dict[str, Any]]:
         """
         See :func:`api.get_daily_summary`.

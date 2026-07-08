@@ -165,9 +165,18 @@ class GarminDataRegistry:
                 "get_daily_events",
                 APIMethodTimeParam.DAILY,
                 "/wellness-service/wellness/dailyEvents?calendarDate={date}",
-                "Discrete daily events (naps, sleep, recorded and auto-detected "
-                "activities) with per-event start/end timestamps. Source for "
-                "individual nap start/end times.",
+                "Auto-detected daily events (e.g. auto-detected activities) with "
+                "per-event start/end timestamps.",
+                "📅",
+            ),
+            GarminDataType(
+                "BODY_BATTERY_EVENTS",
+                "get_body_battery_events",
+                APIMethodTimeParam.DAILY,
+                "/wellness-service/wellness/bodyBattery/events/{date}",
+                "Body battery events (sleep, stress, naps, activities) with start "
+                "time, duration, and body-battery impact. Source for individual "
+                "nap start/end times.",
                 "😴",
             ),
             GarminDataType(

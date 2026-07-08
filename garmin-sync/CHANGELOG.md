@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.0
+
+- Fix: naps are now correctly sourced from the **body battery events** endpoint
+  (`/wellness-service/wellness/bodyBattery/events`), where `event.eventType == "NAP"`.
+  The previous `dailyEvents` source never contained naps.
+- New `BODY_BATTERY_EVENTS` data type and `body_battery_event` table: one row per
+  event (sleep, stress, nap, activity) with start time, duration, body-battery
+  impact, feedback, and average stress.
+- `nap` table enriched with `body_battery_impact`, `feedback_type`, `short_feedback`,
+  `average_stress`, and now populated with real start/end/duration.
+- `DAILY_EVENTS` now only stores auto-detected activities (raw), no longer used for naps.
+
 ## 1.4.1
 
 - Fix/diagnostic: `DAILY_EVENTS` now always stores the full raw payload in a new

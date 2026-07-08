@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from .constants import (
     ACTIVITIES_URL,
     ACTIVITY_URL,
+    BODY_BATTERY_EVENTS_URL,
     CSV_DOWNLOAD_URL,
     DAILY_EVENTS_URL,
     DAILY_INTENSITY_MINUTES_URL,
@@ -262,6 +263,27 @@ def get_daily_events(client: "GarminClient", cdate: str) -> Optional[Dict[str, A
     """
     cdate = _validate_date_format(cdate, "cdate")
     return client._connectapi(DAILY_EVENTS_URL, params={"calendarDate": cdate})
+
+
+def get_body_battery_events(
+    client: "GarminClient", cdate: str
+) -> Optional[List[Dict[str, Any]]]:
+    """
+    Fetch the body battery events feed for the given date.
+
+    Each event carries a nested ``event`` object with ``eventType`` (e.g. ``SLEEP``,
+    ``STRESS``, ``NAP``, ``ACTIVITY``), ``eventStartTimeGmt``, and
+    ``durationInMilliseconds``, plus body-battery impact and stress aggregates. This is
+    the source for individual **nap** start/end times (the aggregate ``napTimeSeconds``
+    in the sleep payload does not expose them).
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: List of body battery event dictionaries, or None when none exist.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    url = f"{BODY_BATTERY_EVENTS_URL}/{cdate}"
+    return client._connectapi(url)
 
 
 def get_daily_summary(client: "GarminClient", cdate: str) -> Optional[Dict[str, Any]]:

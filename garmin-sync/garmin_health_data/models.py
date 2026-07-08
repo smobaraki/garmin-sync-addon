@@ -846,10 +846,11 @@ class Floors(Base, InsertBase):
 
 class Nap(Base, UpsertBase):
     """
-    Individual nap events from the daily events feed.
+    Individual nap events, sourced from the body battery events feed
+    (``event.eventType == "NAP"``).
 
     One row per nap, keyed by ``(user_id, start_ts)``. ``raw`` preserves the full
-    source event so fields not promoted to typed columns are still queryable.
+    source event.
     """
 
     __tablename__ = "nap"
@@ -861,6 +862,36 @@ class Nap(Base, UpsertBase):
     duration_seconds = Column(Integer)
     event_type = Column(String)
     activity_type = Column(String)
+    body_battery_impact = Column(Integer)
+    feedback_type = Column(String)
+    short_feedback = Column(String)
+    average_stress = Column(Float)
+    raw = Column(JSON)
+
+
+class BodyBatteryEvent(Base, UpsertBase):
+    """
+    Body battery events feed: one row per event (sleep, stress, nap, activity).
+
+    Each event has a body-battery impact and stress aggregate. Keyed by
+    ``(user_id, event_start_ts, event_type)`` since distinct event types can share a
+    start time. ``raw`` preserves the full source event.
+    """
+
+    __tablename__ = "body_battery_event"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    event_start_ts = Column(DateTime(timezone=True), primary_key=True)
+    event_type = Column(String, primary_key=True)
+    calendar_date = Column(Date)
+    duration_seconds = Column(Integer)
+    body_battery_impact = Column(Integer)
+    feedback_type = Column(String)
+    short_feedback = Column(String)
+    average_stress = Column(Float)
+    activity_name = Column(String)
+    activity_type = Column(String)
+    activity_id = Column(BigInteger)
     raw = Column(JSON)
 
 
