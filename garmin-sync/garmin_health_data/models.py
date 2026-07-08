@@ -864,6 +864,22 @@ class Nap(Base, UpsertBase):
     raw = Column(JSON)
 
 
+class DailyEvents(Base, UpsertBase):
+    """
+    Raw daily events feed, one row per day.
+
+    Stores the full ``dailyEvents`` payload so nap/event extraction can be
+    verified and refined against real data, and so nothing is lost when the nap
+    parser does not recognise an event shape.
+    """
+
+    __tablename__ = "daily_events"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    raw = Column(JSON)
+
+
 class DailySummary(Base, UpsertBase):
     """
     All-day user summary (the main Garmin dashboard rollup), one row per day.

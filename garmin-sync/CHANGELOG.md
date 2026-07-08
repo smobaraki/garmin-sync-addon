@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1
+
+- Fix/diagnostic: `DAILY_EVENTS` now always stores the full raw payload in a new
+  `daily_events` table (one row per day), in addition to best-effort nap
+  extraction. This makes it possible to verify/refine the nap parser against real
+  data and ensures the events payload is never lost when the nap parser does not
+  recognise an event shape.
+
 ## 1.4.0
 
 - Feature: sync interval can now be set in **seconds** via `sync_interval_sec`

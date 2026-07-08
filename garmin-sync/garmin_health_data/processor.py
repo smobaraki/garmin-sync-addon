@@ -42,6 +42,7 @@ from garmin_health_data.models import (
     BodyComposition,
     BreathingDisruption,
     CyclingAggMetrics,
+    DailyEvents,
     DailySummary,
     FitnessAge,
     Floors,
@@ -3021,6 +3022,19 @@ class GarminProcessor(Processor):
             return
 
         calendar_date = self._resolve_daily_date(data, file_path)
+
+        # Always persist the full raw payload so naps can be verified/refined
+        # against real data and nothing is lost when an event shape is not
+        # recognised by the nap parser below.
+        self._upsert_daily(
+            DailyEvents(
+                user_id=int(self.user_id),
+                calendar_date=calendar_date,
+                raw=data,
+            ),
+            session,
+        )
+
         naps = []
         for ev in self._extract_events(data):
             if not isinstance(ev, dict):
