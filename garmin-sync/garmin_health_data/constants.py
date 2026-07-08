@@ -161,6 +161,86 @@ class GarminDataRegistry:
                 "⚡",
             ),
             GarminDataType(
+                "DAILY_EVENTS",
+                "get_daily_events",
+                APIMethodTimeParam.DAILY,
+                "/wellness-service/wellness/dailyEvents?calendarDate={date}",
+                "Discrete daily events (naps, sleep, recorded and auto-detected "
+                "activities) with per-event start/end timestamps. Source for "
+                "individual nap start/end times.",
+                "😴",
+            ),
+            GarminDataType(
+                "DAILY_SUMMARY",
+                "get_daily_summary",
+                APIMethodTimeParam.DAILY,
+                "/usersummary-service/usersummary/daily/{display_name}"
+                "?calendarDate={date}",
+                "All-day dashboard rollup: total/active/resting/BMR calories, "
+                "distance, active/sedentary/highly-active seconds, floors and "
+                "intensity-minute goals, average/max stress, body battery range.",
+                "📈",
+            ),
+            GarminDataType(
+                "HRV",
+                "get_hrv_data",
+                APIMethodTimeParam.DAILY,
+                "/hrv-service/hrv/{date}",
+                "All-day heart rate variability readings and HRV status "
+                "(distinct from the sleep-window HRV in the Sleep dataset).",
+                "💗",
+            ),
+            GarminDataType(
+                "RESTING_HR",
+                "get_resting_hr",
+                APIMethodTimeParam.DAILY,
+                "/userstats-service/wellness/daily/{display_name}"
+                "?fromDate={date}&untilDate={date}&metricId=60",
+                "Daily resting heart rate trend.",
+                "❤️",
+            ),
+            GarminDataType(
+                "SPO2_DAILY",
+                "get_spo2_data",
+                APIMethodTimeParam.DAILY,
+                "/wellness-service/wellness/daily/spo2/{date}",
+                "All-day pulse oximetry (SpO2) readings and daily aggregates "
+                "(distinct from the sleep-window SpO2 in the Sleep dataset).",
+                "🩸",
+            ),
+            GarminDataType(
+                "MAX_METRICS",
+                "get_max_metrics",
+                APIMethodTimeParam.DAILY,
+                "/metrics-service/metrics/maxmet/daily/{date}/{date}",
+                "Max metrics: VO2 max / MET values and fitness-age inputs.",
+                "🫀",
+            ),
+            GarminDataType(
+                "FITNESS_AGE",
+                "get_fitness_age",
+                APIMethodTimeParam.DAILY,
+                "/fitnessage-service/fitnessage/{date}",
+                "Fitness age and its contributing components.",
+                "🎂",
+            ),
+            GarminDataType(
+                "HYDRATION",
+                "get_hydration_data",
+                APIMethodTimeParam.DAILY,
+                "/usersummary-service/usersummary/hydration/daily/{date}",
+                "Daily fluid intake, goal, daily average, and sweat loss.",
+                "💧",
+            ),
+            GarminDataType(
+                "LIFESTYLE_LOGGING",
+                "get_lifestyle_logging_data",
+                APIMethodTimeParam.DAILY,
+                "/lifestylelogging-service/dailyLog/{date}",
+                "Daily lifestyle logging entries.",
+                "📔",
+            ),
+            GarminDataType(
                 "MENSTRUAL_CYCLE_DAY",
                 "get_menstrual_data_for_date",
                 APIMethodTimeParam.DAILY,

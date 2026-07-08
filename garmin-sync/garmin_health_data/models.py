@@ -844,6 +844,168 @@ class Floors(Base, InsertBase):
     descended = Column(Integer)
 
 
+class Nap(Base, UpsertBase):
+    """
+    Individual nap events from the daily events feed.
+
+    One row per nap, keyed by ``(user_id, start_ts)``. ``raw`` preserves the full
+    source event so fields not promoted to typed columns are still queryable.
+    """
+
+    __tablename__ = "nap"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    start_ts = Column(DateTime(timezone=True), primary_key=True)
+    end_ts = Column(DateTime(timezone=True))
+    calendar_date = Column(Date)
+    duration_seconds = Column(Integer)
+    event_type = Column(String)
+    activity_type = Column(String)
+    raw = Column(JSON)
+
+
+class DailySummary(Base, UpsertBase):
+    """
+    All-day user summary (the main Garmin dashboard rollup), one row per day.
+    """
+
+    __tablename__ = "daily_summary"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    total_kilocalories = Column(Float)
+    active_kilocalories = Column(Float)
+    bmr_kilocalories = Column(Float)
+    wellness_kilocalories = Column(Float)
+    total_steps = Column(Integer)
+    daily_step_goal = Column(Integer)
+    total_distance_meters = Column(Float)
+    highly_active_seconds = Column(Integer)
+    active_seconds = Column(Integer)
+    sedentary_seconds = Column(Integer)
+    sleeping_seconds = Column(Integer)
+    floors_ascended = Column(Float)
+    floors_descended = Column(Float)
+    floors_ascended_goal = Column(Integer)
+    min_heart_rate = Column(Integer)
+    max_heart_rate = Column(Integer)
+    resting_heart_rate = Column(Integer)
+    average_stress_level = Column(Integer)
+    max_stress_level = Column(Integer)
+    body_battery_highest = Column(Integer)
+    body_battery_lowest = Column(Integer)
+    moderate_intensity_minutes = Column(Integer)
+    vigorous_intensity_minutes = Column(Integer)
+    raw = Column(JSON)
+
+
+class HrvDaily(Base, UpsertBase):
+    """
+    All-day heart rate variability summary, one row per day.
+    """
+
+    __tablename__ = "hrv_daily"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    weekly_avg = Column(Integer)
+    last_night_avg = Column(Integer)
+    last_night_5min_high = Column(Integer)
+    status = Column(String)
+    baseline_low_upper = Column(Integer)
+    baseline_balanced_low = Column(Integer)
+    baseline_balanced_upper = Column(Integer)
+    baseline_marker_value = Column(Float)
+    raw = Column(JSON)
+
+
+class RestingHr(Base, UpsertBase):
+    """
+    Daily resting heart rate, one row per day.
+    """
+
+    __tablename__ = "resting_hr"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    resting_hr = Column(Integer)
+    raw = Column(JSON)
+
+
+class Spo2Daily(Base, UpsertBase):
+    """
+    All-day pulse oximetry (SpO2) summary, one row per day.
+    """
+
+    __tablename__ = "spo2_daily"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    average_spo2 = Column(Integer)
+    lowest_spo2 = Column(Integer)
+    latest_spo2 = Column(Integer)
+    raw = Column(JSON)
+
+
+class MaxMetrics(Base, UpsertBase):
+    """
+    Max metrics (VO2 max / MET) and fitness-age inputs, one row per day.
+    """
+
+    __tablename__ = "max_metrics"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    vo2_max_running = Column(Float)
+    vo2_max_cycling = Column(Float)
+    fitness_age = Column(Float)
+    raw = Column(JSON)
+
+
+class FitnessAge(Base, UpsertBase):
+    """
+    Fitness age and contributing components, one row per day.
+    """
+
+    __tablename__ = "fitness_age"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    fitness_age = Column(Float)
+    achievable_fitness_age = Column(Float)
+    raw = Column(JSON)
+
+
+class Hydration(Base, UpsertBase):
+    """
+    Daily hydration (fluid intake), one row per day.
+    """
+
+    __tablename__ = "hydration"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    value_ml = Column(Float)
+    goal_ml = Column(Float)
+    daily_average_ml = Column(Float)
+    sweat_loss_ml = Column(Float)
+    raw = Column(JSON)
+
+
+class LifestyleLog(Base, UpsertBase):
+    """
+    Daily lifestyle-logging entries, one row per day.
+
+    Payload structure varies; ``raw`` preserves the full response.
+    """
+
+    __tablename__ = "lifestyle_log"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    raw = Column(JSON)
+
+
 class PersonalRecord(Base, InsertBase):
     """
     Personal records achieved by users across various activity types and distances.

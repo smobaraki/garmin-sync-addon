@@ -29,21 +29,30 @@ from .constants import (
     ACTIVITIES_URL,
     ACTIVITY_URL,
     CSV_DOWNLOAD_URL,
+    DAILY_EVENTS_URL,
     DAILY_INTENSITY_MINUTES_URL,
     DAILY_RESPIRATION_URL,
     DAILY_SLEEP_URL,
+    DAILY_SPO2_URL,
     DAILY_STRESS_URL,
+    DAILY_SUMMARY_URL,
     FIT_DOWNLOAD_URL,
+    FITNESS_AGE_URL,
     FLOORS_CHART_DAILY_URL,
     GEAR_URL,
     GPX_DOWNLOAD_URL,
     HEART_RATES_DAILY_URL,
+    HRV_URL,
+    HYDRATION_DAILY_URL,
     KML_DOWNLOAD_URL,
+    LIFESTYLE_LOGGING_URL,
+    MAX_METRICS_URL,
     MENSTRUAL_CALENDAR_MAX_DAYS,
     MENSTRUAL_CALENDAR_URL,
     MENSTRUAL_DAYVIEW_URL,
     PERSONAL_RECORD_URL,
     RACE_PREDICTOR_URL,
+    RESTING_HR_URL,
     TCX_DOWNLOAD_URL,
     TRAINING_READINESS_URL,
     TRAINING_STATUS_URL,
@@ -235,6 +244,136 @@ def get_intensity_minutes_data(client: "GarminClient", cdate: str) -> Dict[str, 
     """
     cdate = _validate_date_format(cdate, "cdate")
     url = f"{DAILY_INTENSITY_MINUTES_URL}/{cdate}"
+    return client._connectapi(url)
+
+
+def get_daily_events(client: "GarminClient", cdate: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch the daily events feed for the given date.
+
+    The daily events feed lists discrete events for the day (sleep, naps,
+    recorded and auto-detected activities), each with start/end timestamps. This
+    is the source for per-nap start/end times, which the aggregate
+    ``napTimeSeconds`` in the sleep payload does not expose.
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: Daily events dictionary, or None when the endpoint returns nothing.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    return client._connectapi(DAILY_EVENTS_URL, params={"calendarDate": cdate})
+
+
+def get_daily_summary(client: "GarminClient", cdate: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch the all-day user summary (the main Garmin dashboard rollup) for a date.
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: Daily summary dictionary with calorie, distance, activity-seconds,
+        stress, body battery, and intensity-minute aggregates.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    url = f"{DAILY_SUMMARY_URL}/{client.display_name}"
+    return client._connectapi(url, params={"calendarDate": cdate})
+
+
+def get_hrv_data(client: "GarminClient", cdate: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch all-day heart-rate-variability data for a date.
+
+    Distinct from the sleep-window HRV already captured via the SLEEP dataset: this
+    is the dedicated HRV service with the full reading series and HRV status.
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: HRV dictionary, or None when no HRV data exists for the date.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    url = f"{HRV_URL}/{cdate}"
+    return client._connectapi(url)
+
+
+def get_resting_hr(client: "GarminClient", cdate: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch the daily resting heart rate for a date.
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: Resting heart rate dictionary.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    url = f"{RESTING_HR_URL}/{client.display_name}"
+    params = {"fromDate": cdate, "untilDate": cdate, "metricId": 60}
+    return client._connectapi(url, params=params)
+
+
+def get_spo2_data(client: "GarminClient", cdate: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch all-day pulse-oximetry (SpO2) data for a date.
+
+    Distinct from the sleep-window SpO2 already captured via the SLEEP dataset.
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: SpO2 dictionary, or None when no SpO2 data exists for the date.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    url = f"{DAILY_SPO2_URL}/{cdate}"
+    return client._connectapi(url)
+
+
+def get_max_metrics(client: "GarminClient", cdate: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch max-metrics (VO2 max / MET) data for a date.
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: Max-metrics dictionary including VO2 max and fitness-age inputs.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    url = f"{MAX_METRICS_URL}/{cdate}/{cdate}"
+    return client._connectapi(url)
+
+
+def get_fitness_age(client: "GarminClient", cdate: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch fitness-age data for a date.
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: Fitness-age dictionary.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    url = f"{FITNESS_AGE_URL}/{cdate}"
+    return client._connectapi(url)
+
+
+def get_hydration_data(client: "GarminClient", cdate: str) -> Optional[Dict[str, Any]]:
+    """
+    Fetch hydration (fluid intake) data for a date.
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: Hydration dictionary with intake, goal, and sweat-loss values.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    url = f"{HYDRATION_DAILY_URL}/{cdate}"
+    return client._connectapi(url)
+
+
+def get_lifestyle_logging_data(
+    client: "GarminClient", cdate: str
+) -> Optional[Dict[str, Any]]:
+    """
+    Fetch lifestyle-logging data for a date.
+
+    :param client: GarminClient instance.
+    :param cdate: Date in ``YYYY-MM-DD`` format.
+    :return: Lifestyle-logging dictionary.
+    """
+    cdate = _validate_date_format(cdate, "cdate")
+    url = f"{LIFESTYLE_LOGGING_URL}/{cdate}"
     return client._connectapi(url)
 
 

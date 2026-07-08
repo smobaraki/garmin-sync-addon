@@ -42,22 +42,31 @@ from garmin_health_data.models import (
     BodyComposition,
     BreathingDisruption,
     CyclingAggMetrics,
+    DailySummary,
+    FitnessAge,
     Floors,
     Gear,
     HeartRate,
     HRV,
+    HrvDaily,
+    Hydration,
     IntensityMinutes,
+    LifestyleLog,
+    MaxMetrics,
     MenstrualCycleDay,
     MenstrualCycleSummary,
     MenstrualCycleTag,
+    Nap,
     PersonalRecord,
     RacePredictions,
     Respiration,
+    RestingHr,
     RunningAggMetrics,
     Sleep,
     SleepLevel,
     SleepMovement,
     SleepRestlessMoment,
+    Spo2Daily,
     SpO2,
     Steps,
     StrengthExercise,
@@ -181,6 +190,15 @@ class GarminProcessor(Processor):
                 ("FLOORS", self._process_floors),
                 ("HEART_RATE", self._process_heart_rate),
                 ("INTENSITY_MINUTES", self._process_intensity_minutes),
+                ("DAILY_EVENTS", self._process_daily_events),
+                ("DAILY_SUMMARY", self._process_daily_summary),
+                ("HRV", self._process_hrv_daily),
+                ("RESTING_HR", self._process_resting_hr),
+                ("SPO2_DAILY", self._process_spo2_daily),
+                ("MAX_METRICS", self._process_max_metrics),
+                ("FITNESS_AGE", self._process_fitness_age),
+                ("HYDRATION", self._process_hydration),
+                ("LIFESTYLE_LOGGING", self._process_lifestyle_logging),
                 ("MENSTRUAL_CYCLE_DAY", self._process_menstrual_cycle_day),
                 ("MENSTRUAL_CYCLE_SUMMARY", self._process_menstrual_cycle_summary),
                 ("PERSONAL_RECORDS", self._process_personal_records),
@@ -2885,6 +2903,394 @@ class GarminProcessor(Processor):
         if not ts_str:
             return None
         return self._parse_garmin_iso(ts_str)
+
+    # ------------------------------------------------------------------
+    # Phase 1 daily-mirror helpers and processors
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _first_dict(payload: Any) -> Dict[str, Any]:
+        """
+        Return ``payload`` if it is a dict, or its first dict element if it is a
+        non-empty list, else an empty dict. Several daily endpoints wrap their
+        single-day payload in a one-element list.
+        """
+        if isinstance(payload, dict):
+            return payload
+        if isinstance(payload, list) and payload and isinstance(payload[0], dict):
+            return payload[0]
+        return {}
+
+    def _resolve_daily_date(self, payload: Any, file_path: Path) -> date:
+        """
+        Resolve the calendar date for a daily record.
+
+        Prefers a ``calendarDate`` field in the payload; falls back to the date
+        embedded in the file's timestamp (files are stamped at midday UTC on the
+        extraction date), which is always present.
+        """
+        d = self._first_dict(payload)
+        cd = d.get("calendarDate")
+        if cd:
+            try:
+                return self._parse_date_string(str(cd)[:10])
+            except (ValueError, TypeError):
+                pass
+        parts = self._parse_filename(file_path.name)
+        return self._parse_date_string(parts["timestamp"][:10])
+
+    def _upsert_daily(self, instance: Any, session: Session) -> None:
+        """Upsert a single daily record keyed by ``(user_id, calendar_date)``."""
+        upsert_model_instances(
+            session=session,
+            model_instances=[instance],
+            conflict_columns=["user_id", "calendar_date"],
+            on_conflict_update=True,
+        )
+
+    @staticmethod
+    def _extract_events(data: Any) -> List[Any]:
+        """
+        Best-effort extraction of the event list from a daily events payload.
+
+        The feed's exact wrapper key is not guaranteed, so this tries the known
+        candidates and falls back to the first list-of-dicts value.
+        """
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for key in (
+                "dailyEventDTOList",
+                "eventList",
+                "events",
+                "dailyEvents",
+                "calendarEventList",
+                "wellnessEvents",
+            ):
+                val = data.get(key)
+                if isinstance(val, list):
+                    return val
+            for val in data.values():
+                if isinstance(val, list) and val and isinstance(val[0], dict):
+                    return val
+        return []
+
+    def _coerce_event_ts(
+        self, ev: Dict[str, Any], keys: tuple
+    ) -> Optional[datetime]:
+        """
+        Coerce the first present timestamp field into a UTC-aware datetime.
+
+        Accepts epoch-milliseconds ints/floats or ISO 8601-like strings, since the
+        daily events feed's timestamp encoding is not guaranteed.
+        """
+        for key in keys:
+            val = ev.get(key)
+            if val is None:
+                continue
+            if isinstance(val, bool):
+                continue
+            if isinstance(val, (int, float)):
+                try:
+                    return datetime.fromtimestamp(val / 1000, tz=timezone.utc)
+                except (OverflowError, OSError, ValueError):
+                    continue
+            if isinstance(val, str):
+                try:
+                    return self._parse_garmin_iso(val).replace(tzinfo=timezone.utc)
+                except (ValueError, TypeError):
+                    continue
+        return None
+
+    def _process_daily_events(self, file_path: Path, session: Session):
+        """
+        Process a DAILY_EVENTS file and extract nap events into the ``nap`` table.
+
+        The feed lists discrete daily events (naps, sleep, activities); this filters
+        for nap events and stores their start/end/duration. Parsing is defensive
+        because the feed's exact shape is not fixed; the raw event is preserved in
+        ``nap.raw`` and the full source file is archived, so unrecognised shapes can
+        be refined later without data loss.
+
+        :param file_path: Path to the DAILY_EVENTS JSON file.
+        :param session: SQLAlchemy Session object.
+        """
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No daily events data found.", fg="yellow")
+            return
+
+        calendar_date = self._resolve_daily_date(data, file_path)
+        naps = []
+        for ev in self._extract_events(data):
+            if not isinstance(ev, dict):
+                continue
+            blob = " ".join(
+                str(ev.get(k, ""))
+                for k in (
+                    "eventType",
+                    "activityType",
+                    "type",
+                    "name",
+                    "wellnessEventType",
+                )
+            ).lower()
+            if "nap" not in blob:
+                continue
+            start = self._coerce_event_ts(
+                ev,
+                (
+                    "startTimeGmt",
+                    "startTimestampGmt",
+                    "startTimeGMT",
+                    "startGmt",
+                    "startTimeLocal",
+                    "startTimestampLocal",
+                ),
+            )
+            if start is None:
+                continue
+            end = self._coerce_event_ts(
+                ev,
+                (
+                    "endTimeGmt",
+                    "endTimestampGmt",
+                    "endTimeGMT",
+                    "endGmt",
+                    "endTimeLocal",
+                    "endTimestampLocal",
+                ),
+            )
+            dur = (
+                ev.get("durationInSeconds")
+                or ev.get("durationSeconds")
+                or ev.get("duration")
+            )
+            try:
+                dur = int(dur) if dur is not None else None
+            except (TypeError, ValueError):
+                dur = None
+            naps.append(
+                Nap(
+                    user_id=int(self.user_id),
+                    start_ts=start,
+                    end_ts=end,
+                    calendar_date=calendar_date,
+                    duration_seconds=dur,
+                    event_type=ev.get("eventType") or ev.get("type"),
+                    activity_type=ev.get("activityType"),
+                    raw=ev,
+                )
+            )
+
+        if naps:
+            upsert_model_instances(
+                session=session,
+                model_instances=naps,
+                conflict_columns=["user_id", "start_ts"],
+                on_conflict_update=True,
+            )
+            click.echo(f"Processed {len(naps)} nap event(s).")
+        else:
+            click.echo("No nap events found in daily events.")
+
+    def _process_daily_summary(self, file_path: Path, session: Session):
+        """Process a DAILY_SUMMARY file into the ``daily_summary`` table."""
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No daily summary data found.", fg="yellow")
+            return
+        d = self._first_dict(data)
+        self._upsert_daily(
+            DailySummary(
+                user_id=int(self.user_id),
+                calendar_date=self._resolve_daily_date(data, file_path),
+                total_kilocalories=d.get("totalKilocalories"),
+                active_kilocalories=d.get("activeKilocalories"),
+                bmr_kilocalories=d.get("bmrKilocalories"),
+                wellness_kilocalories=d.get("wellnessKilocalories"),
+                total_steps=d.get("totalSteps"),
+                daily_step_goal=d.get("dailyStepGoal"),
+                total_distance_meters=d.get("totalDistanceMeters"),
+                highly_active_seconds=d.get("highlyActiveSeconds"),
+                active_seconds=d.get("activeSeconds"),
+                sedentary_seconds=d.get("sedentarySeconds"),
+                sleeping_seconds=d.get("sleepingSeconds"),
+                floors_ascended=d.get("floorsAscended"),
+                floors_descended=d.get("floorsDescended"),
+                floors_ascended_goal=d.get("userFloorsAscendedGoal"),
+                min_heart_rate=d.get("minHeartRate"),
+                max_heart_rate=d.get("maxHeartRate"),
+                resting_heart_rate=d.get("restingHeartRate"),
+                average_stress_level=d.get("averageStressLevel"),
+                max_stress_level=d.get("maxStressLevel"),
+                body_battery_highest=d.get("bodyBatteryHighestValue"),
+                body_battery_lowest=d.get("bodyBatteryLowestValue"),
+                moderate_intensity_minutes=d.get("moderateIntensityMinutes"),
+                vigorous_intensity_minutes=d.get("vigorousIntensityMinutes"),
+                raw=data,
+            ),
+            session,
+        )
+        click.echo("Processed daily summary.")
+
+    def _process_hrv_daily(self, file_path: Path, session: Session):
+        """Process an HRV file into the ``hrv_daily`` table."""
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No HRV data found.", fg="yellow")
+            return
+        d = self._first_dict(data)
+        summary = d.get("hrvSummary") or {}
+        baseline = summary.get("baseline") or {}
+        self._upsert_daily(
+            HrvDaily(
+                user_id=int(self.user_id),
+                calendar_date=self._resolve_daily_date(data, file_path),
+                weekly_avg=summary.get("weeklyAvg"),
+                last_night_avg=summary.get("lastNightAvg"),
+                last_night_5min_high=summary.get("lastNight5MinHigh"),
+                status=summary.get("status"),
+                baseline_low_upper=baseline.get("lowUpper"),
+                baseline_balanced_low=baseline.get("balancedLow"),
+                baseline_balanced_upper=baseline.get("balancedUpper"),
+                baseline_marker_value=baseline.get("markerValue"),
+                raw=data,
+            ),
+            session,
+        )
+        click.echo("Processed daily HRV.")
+
+    def _process_resting_hr(self, file_path: Path, session: Session):
+        """Process a RESTING_HR file into the ``resting_hr`` table."""
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No resting heart rate data found.", fg="yellow")
+            return
+        d = self._first_dict(data)
+        rhr = None
+        metrics = (d.get("allMetrics") or {}).get("metricsMap") or {}
+        series = metrics.get("WELLNESS_RESTING_HEART_RATE") or []
+        if series and isinstance(series[0], dict):
+            rhr = series[0].get("value")
+        if rhr is None:
+            rhr = d.get("restingHeartRate") or d.get("value")
+        try:
+            rhr = int(rhr) if rhr is not None else None
+        except (TypeError, ValueError):
+            rhr = None
+        self._upsert_daily(
+            RestingHr(
+                user_id=int(self.user_id),
+                calendar_date=self._resolve_daily_date(data, file_path),
+                resting_hr=rhr,
+                raw=data,
+            ),
+            session,
+        )
+        click.echo("Processed resting heart rate.")
+
+    def _process_spo2_daily(self, file_path: Path, session: Session):
+        """Process a SPO2_DAILY file into the ``spo2_daily`` table."""
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No daily SpO2 data found.", fg="yellow")
+            return
+        d = self._first_dict(data)
+        self._upsert_daily(
+            Spo2Daily(
+                user_id=int(self.user_id),
+                calendar_date=self._resolve_daily_date(data, file_path),
+                average_spo2=d.get("averageSpO2"),
+                lowest_spo2=d.get("lowestSpO2"),
+                latest_spo2=d.get("latestSpO2"),
+                raw=data,
+            ),
+            session,
+        )
+        click.echo("Processed daily SpO2.")
+
+    def _process_max_metrics(self, file_path: Path, session: Session):
+        """Process a MAX_METRICS file into the ``max_metrics`` table."""
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No max metrics data found.", fg="yellow")
+            return
+        d = self._first_dict(data)
+        generic = d.get("generic") or {}
+        cycling = d.get("cycling") or {}
+        self._upsert_daily(
+            MaxMetrics(
+                user_id=int(self.user_id),
+                calendar_date=self._resolve_daily_date(data, file_path),
+                vo2_max_running=(
+                    generic.get("vo2MaxPreciseValue") or generic.get("vo2MaxValue")
+                ),
+                vo2_max_cycling=(
+                    cycling.get("vo2MaxPreciseValue") or cycling.get("vo2MaxValue")
+                ),
+                fitness_age=generic.get("fitnessAge"),
+                raw=data,
+            ),
+            session,
+        )
+        click.echo("Processed max metrics.")
+
+    def _process_fitness_age(self, file_path: Path, session: Session):
+        """Process a FITNESS_AGE file into the ``fitness_age`` table."""
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No fitness age data found.", fg="yellow")
+            return
+        d = self._first_dict(data)
+        self._upsert_daily(
+            FitnessAge(
+                user_id=int(self.user_id),
+                calendar_date=self._resolve_daily_date(data, file_path),
+                fitness_age=d.get("fitnessAge"),
+                achievable_fitness_age=d.get("achievableFitnessAge"),
+                raw=data,
+            ),
+            session,
+        )
+        click.echo("Processed fitness age.")
+
+    def _process_hydration(self, file_path: Path, session: Session):
+        """Process a HYDRATION file into the ``hydration`` table."""
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No hydration data found.", fg="yellow")
+            return
+        d = self._first_dict(data)
+        self._upsert_daily(
+            Hydration(
+                user_id=int(self.user_id),
+                calendar_date=self._resolve_daily_date(data, file_path),
+                value_ml=d.get("valueInML"),
+                goal_ml=d.get("goalInML"),
+                daily_average_ml=d.get("dailyAverageinML"),
+                sweat_loss_ml=d.get("sweatLossInML"),
+                raw=data,
+            ),
+            session,
+        )
+        click.echo("Processed hydration.")
+
+    def _process_lifestyle_logging(self, file_path: Path, session: Session):
+        """Process a LIFESTYLE_LOGGING file into the ``lifestyle_log`` table."""
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No lifestyle logging data found.", fg="yellow")
+            return
+        self._upsert_daily(
+            LifestyleLog(
+                user_id=int(self.user_id),
+                calendar_date=self._resolve_daily_date(data, file_path),
+                raw=data,
+            ),
+            session,
+        )
+        click.echo("Processed lifestyle logging.")
 
     def _persist_activity_metrics(
         self,

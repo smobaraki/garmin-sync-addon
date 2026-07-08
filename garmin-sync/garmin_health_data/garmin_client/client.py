@@ -899,6 +899,60 @@ class GarminClient:
         """
         return api.get_intensity_minutes_data(self, cdate)
 
+    def get_daily_events(self, cdate: str) -> Optional[Dict[str, Any]]:
+        """
+        See :func:`api.get_daily_events`.
+        """
+        return api.get_daily_events(self, cdate)
+
+    def get_daily_summary(self, cdate: str) -> Optional[Dict[str, Any]]:
+        """
+        See :func:`api.get_daily_summary`.
+        """
+        return api.get_daily_summary(self, cdate)
+
+    def get_hrv_data(self, cdate: str) -> Optional[Dict[str, Any]]:
+        """
+        See :func:`api.get_hrv_data`.
+        """
+        return api.get_hrv_data(self, cdate)
+
+    def get_resting_hr(self, cdate: str) -> Optional[Dict[str, Any]]:
+        """
+        See :func:`api.get_resting_hr`.
+        """
+        return api.get_resting_hr(self, cdate)
+
+    def get_spo2_data(self, cdate: str) -> Optional[Dict[str, Any]]:
+        """
+        See :func:`api.get_spo2_data`.
+        """
+        return api.get_spo2_data(self, cdate)
+
+    def get_max_metrics(self, cdate: str) -> Optional[Dict[str, Any]]:
+        """
+        See :func:`api.get_max_metrics`.
+        """
+        return api.get_max_metrics(self, cdate)
+
+    def get_fitness_age(self, cdate: str) -> Optional[Dict[str, Any]]:
+        """
+        See :func:`api.get_fitness_age`.
+        """
+        return api.get_fitness_age(self, cdate)
+
+    def get_hydration_data(self, cdate: str) -> Optional[Dict[str, Any]]:
+        """
+        See :func:`api.get_hydration_data`.
+        """
+        return api.get_hydration_data(self, cdate)
+
+    def get_lifestyle_logging_data(self, cdate: str) -> Optional[Dict[str, Any]]:
+        """
+        See :func:`api.get_lifestyle_logging_data`.
+        """
+        return api.get_lifestyle_logging_data(self, cdate)
+
     def get_menstrual_data_for_date(self, cdate: str) -> Optional[Dict[str, Any]]:
         """
         See :func:`api.get_menstrual_data_for_date`.

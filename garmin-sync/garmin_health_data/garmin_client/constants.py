@@ -110,6 +110,17 @@ HEART_RATES_DAILY_URL = "/wellness-service/wellness/dailyHeartRate"
 USER_SUMMARY_CHART_URL = "/wellness-service/wellness/dailySummaryChart"
 FLOORS_CHART_DAILY_URL = "/wellness-service/wellness/floorsChartData/daily"
 DAILY_INTENSITY_MINUTES_URL = "/wellness-service/wellness/daily/im"
+DAILY_EVENTS_URL = "/wellness-service/wellness/dailyEvents"
+DAILY_SPO2_URL = "/wellness-service/wellness/daily/spo2"
+
+# Daily rollups / wellness stats (Phase 1: full-mirror daily health).
+DAILY_SUMMARY_URL = "/usersummary-service/usersummary/daily"
+HYDRATION_DAILY_URL = "/usersummary-service/usersummary/hydration/daily"
+RESTING_HR_URL = "/userstats-service/wellness/daily"
+HRV_URL = "/hrv-service/hrv"
+MAX_METRICS_URL = "/metrics-service/metrics/maxmet/daily"
+FITNESS_AGE_URL = "/fitnessage-service/fitnessage"
+LIFESTYLE_LOGGING_URL = "/lifestylelogging-service/dailyLog"
 
 # Weight / body composition.
 WEIGHT_DATERANGE_URL = "/weight-service/weight/daterangesnapshot"

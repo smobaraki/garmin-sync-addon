@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.0
+
+- Feature (full-mirror phase 1): fetch and store **naps** and core daily-health
+  data so it no longer requires opening Garmin Connect. New DAILY data types and
+  tables:
+  - `DAILY_EVENTS` → `nap` (individual naps with start/end/duration)
+  - `DAILY_SUMMARY` → `daily_summary` (all-day dashboard rollup)
+  - `HRV` → `hrv_daily` (all-day HRV + status)
+  - `RESTING_HR` → `resting_hr`
+  - `SPO2_DAILY` → `spo2_daily`
+  - `MAX_METRICS` → `max_metrics`
+  - `FITNESS_AGE` → `fitness_age`
+  - `HYDRATION` → `hydration`
+  - `LIFESTYLE_LOGGING` → `lifestyle_log`
+  Each table keeps a `raw` JSON column so nothing from the source payload is lost.
+  Tables are created automatically on the next sync.
+
 ## 1.2.0
 
 - Feature: fetch and store Garmin **gear** (shoes, bikes, and other equipment).
