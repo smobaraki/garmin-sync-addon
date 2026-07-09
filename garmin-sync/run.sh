@@ -90,10 +90,18 @@ while true; do
   fi
 
   echo "[$(date -Iseconds)] Running ETL..."
-  python -m garmin_health_data.cli extract $ARGS
-  touch "$STATE_FILE"
+  # Guard the extract so a non-zero exit (e.g. the lifecycle lock is held by a
+  # concurrent manual backfill, or a transient API/429 failure) does NOT kill
+  # the daemon via `set -e`. A failed cycle is logged and the loop continues.
+  if python -m garmin_health_data.cli extract $ARGS; then
+    touch "$STATE_FILE"
+    ETL_OK=1
+  else
+    echo "[$(date -Iseconds)] ⚠️ ETL run exited non-zero; continuing to next cycle."
+    ETL_OK=0
+  fi
 
-  if [ "$PENDING_BACKFILL" = "1" ]; then
+  if [ "$PENDING_BACKFILL" = "1" ] && [ "$ETL_OK" = "1" ]; then
     touch "${BF_FILE:-/data/.garmin_backfill_done}"
     PENDING_BACKFILL=0
     echo "[$(date -Iseconds)] Backfill done. Switching to routine sync."

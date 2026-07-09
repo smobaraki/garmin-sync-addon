@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.3
+
+- Fix: the routine sync loop no longer dies when a single `extract` run exits
+  non-zero (e.g. the lifecycle lock is held by a concurrent manual backfill, or a
+  transient API/429 error). The failed cycle is logged and the loop continues,
+  instead of `set -e` killing the whole daemon.
+
 ## 1.5.2
 
 - Fix: auto-add columns that models gained after their table was first created.
