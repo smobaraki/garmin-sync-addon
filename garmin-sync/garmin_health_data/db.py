@@ -44,6 +44,49 @@ from garmin_health_data.models import (
 _MIN_SQLITE_VERSION = (3, 35, 0)
 
 
+def _add_missing_columns(engine) -> None:
+    """
+    Add columns present on the ORM models but missing from existing tables.
+
+    ``Base.metadata.create_all`` only creates whole missing tables; it never adds
+    new columns to a table that already exists. When a model gains a column (e.g.
+    the ``nap`` table's ``body_battery_impact`` / ``short_feedback`` additions),
+    existing databases would be missing it and inserts would fail. This performs a
+    best-effort additive ``ALTER TABLE ... ADD COLUMN`` for each missing column,
+    rolling back individually on error (e.g. a NOT NULL column without a default on
+    a populated table). Only additive; never drops or alters existing columns.
+
+    :param engine: SQLAlchemy engine bound to the target database.
+    """
+    from sqlalchemy import inspect as sqla_inspect
+
+    insp = sqla_inspect(engine)
+    existing_tables = set(insp.get_table_names())
+
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue  # Brand-new tables are handled by create_all.
+        existing_cols = {c["name"] for c in insp.get_columns(table.name)}
+        for col in table.columns:
+            if col.name in existing_cols:
+                continue
+            try:
+                col_type = col.type.compile(dialect=engine.dialect)
+            except Exception:
+                continue
+            ddl = (
+                f'ALTER TABLE "{table.name}" '
+                f'ADD COLUMN "{col.name}" {col_type}'
+            )
+            with engine.connect() as conn:
+                try:
+                    conn.execute(text(ddl))
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+
+
+
 def _detect_database_url() -> Optional[str]:
     """
     Return the ``DATABASE_URL`` environment variable if set, else None.
@@ -220,6 +263,10 @@ def _execute_ddl_on_postgresql(engine) -> None:
     # only touches tables that do not yet exist.
     Base.metadata.create_all(engine)
 
+    # Add any columns that models gained after their table was first created
+    # (create_all never alters existing tables).
+    _add_missing_columns(engine)
+
     # Reset SERIAL sequences for tables that may have been populated
     # before their auto-increment column was correctly defined. Without
     # this, new INSERTs without an explicit PK value collide with
@@ -335,6 +382,7 @@ def create_tables(db_path: str = "garmin_data.db") -> None:
     engine = get_engine(db_path)
     try:
         Base.metadata.create_all(engine)
+        _add_missing_columns(engine)
     finally:
         engine.dispose()
 

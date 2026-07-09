@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.2
+
+- Fix: auto-add columns that models gained after their table was first created.
+  `create_all` never alters existing tables, so the `nap` enrichment columns
+  (`body_battery_impact`, `feedback_type`, `short_feedback`, `average_stress`)
+  were missing on existing databases, causing nap inserts to fail and files to
+  quarantine. A best-effort additive `ALTER TABLE ... ADD COLUMN` reconciler now
+  runs on init for both PostgreSQL and SQLite.
+
 ## 1.5.1
 
 - Fix: SQLite `create_tables` now also runs `Base.metadata.create_all`, so tables
