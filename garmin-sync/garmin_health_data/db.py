@@ -327,6 +327,17 @@ def create_tables(db_path: str = "garmin_data.db") -> None:
     finally:
         conn.close()
 
+    # Create any tables added after tables.ddl was last synced (e.g. gear, nap,
+    # body_battery_event, daily_summary, hrv_daily, ...). create_all is
+    # idempotent and only creates tables that do not yet exist, mirroring the
+    # PostgreSQL path. Without this, SQLite databases are missing every table
+    # added since the DDL file was last regenerated, causing inserts to fail.
+    engine = get_engine(db_path)
+    try:
+        Base.metadata.create_all(engine)
+    finally:
+        engine.dispose()
+
 
 @contextmanager
 def get_session(db_path: str = "garmin_data.db"):

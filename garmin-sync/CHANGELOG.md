@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.1
+
+- Fix: SQLite `create_tables` now also runs `Base.metadata.create_all`, so tables
+  added after `tables.ddl` was last generated (gear, nap, body_battery_event,
+  daily_summary, hrv_daily, etc.) are actually created. Previously a SQLite run
+  (e.g. `garmin extract` without `DATABASE_URL`) failed to insert into the new
+  tables and quarantined the file.
+
 ## 1.5.0
 
 - Fix: naps are now correctly sourced from the **body battery events** endpoint
