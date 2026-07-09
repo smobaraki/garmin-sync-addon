@@ -1,0 +1,231 @@
+{
+  "_meta": {
+    "description": "Norwegian human-readable labels for Garmin enum/localization keys. Source of truth for client rendering without runtime AI. Garmin does not publish an official enum dictionary; these are curated Norwegian labels faithful to Garmin's meaning. Unknown keys fall back to the humanizer in enum_labels.ts. Override freely.",
+    "sentiment_values": ["positive", "negative", "neutral"],
+    "column_domains": {
+      "sleep.sleep_score_feedback": "sleep_score_feedback",
+      "sleep.sleep_score_insight": "sleep_score_insight",
+      "sleep.sleep_need_feedback": "sleep_need_feedback",
+      "sleep.sleep_need_training_feedback": "sleep_need_training_feedback",
+      "sleep.next_sleep_need_feedback": "sleep_need_feedback",
+      "sleep.next_sleep_need_training_feedback": "sleep_need_training_feedback",
+      "sleep.hrv_status": "hrv_status",
+      "sleep.breathing_disruption_severity": "breathing_disruption_severity",
+      "sleep.total_duration_key": "score_key",
+      "sleep.stress_key": "score_key",
+      "sleep.awake_count_key": "score_key",
+      "sleep.restlessness_key": "score_key",
+      "sleep.score_overall_key": "score_key",
+      "sleep.light_pct_key": "score_key",
+      "sleep.deep_pct_key": "score_key",
+      "sleep.rem_pct_key": "score_key",
+      "body_battery_event.feedback_type": "body_battery_feedback_type",
+      "body_battery_event.short_feedback": "body_battery_short_feedback",
+      "nap.feedback_type": "body_battery_feedback_type",
+      "nap.short_feedback": "body_battery_short_feedback",
+      "training_readiness.level": "training_readiness_level",
+      "training_load.acwr_status": "acwr_status",
+      "training_load.training_status": "training_status",
+      "acclimation.altitude_trend": "acclimation_trend",
+      "acclimation.heat_trend": "acclimation_trend",
+      "steps.activity_level": "steps_activity_level"
+    }
+  },
+
+  "score_key": {
+    "EXCELLENT": { "label": "Utmerket", "sentiment": "positive" },
+    "GOOD": { "label": "Bra", "sentiment": "positive" },
+    "FAIR": { "label": "Middels", "sentiment": "neutral" },
+    "POOR": { "label": "Dårlig", "sentiment": "negative" },
+    "INVALID": { "label": "Mangler data", "sentiment": "neutral" }
+  },
+
+  "hrv_status": {
+    "BALANCED": { "label": "Balansert", "description": "HRV er innenfor ditt normale nivå.", "sentiment": "positive" },
+    "LOW": { "label": "Lav", "description": "HRV er under ditt normale nivå – kan tyde på belastning eller manglende restitusjon.", "sentiment": "negative" },
+    "UNBALANCED": { "label": "Ubalansert", "description": "HRV svinger utenfor ditt normale nivå.", "sentiment": "negative" },
+    "POOR": { "label": "Dårlig", "sentiment": "negative" },
+    "NONE": { "label": "Ingen data", "sentiment": "neutral" }
+  },
+
+  "breathing_disruption_severity": {
+    "NONE": { "label": "Ingen", "description": "Ingen pustforstyrrelser registrert.", "sentiment": "positive" },
+    "LOW": { "label": "Lav", "sentiment": "neutral" },
+    "MODERATE": { "label": "Moderat", "sentiment": "negative" },
+    "HIGH": { "label": "Høy", "sentiment": "negative" }
+  },
+
+  "sleep_score_feedback": {
+    "NONE": { "label": "Ingen tilbakemelding", "sentiment": "neutral" },
+    "POSITIVE_LONG_AND_CONTINUOUS": { "label": "Lang og sammenhengende søvn", "description": "Du sov lenge med få oppvåkninger.", "sentiment": "positive" },
+    "POSITIVE_LONG_AND_RECOVERING": { "label": "Lang og restituerende søvn", "description": "Lang søvn med god restitusjon.", "sentiment": "positive" },
+    "POSITIVE_LONG_AND_REFRESHING": { "label": "Lang og forfriskende søvn", "sentiment": "positive" },
+    "POSITIVE_LONG_AND_CALM": { "label": "Lang og rolig søvn", "sentiment": "positive" },
+    "POSITIVE_LONG_AND_DEEP": { "label": "Lang og dyp søvn", "description": "Du sov lenge med mye dyp søvn – god fysisk restitusjon.", "sentiment": "positive" },
+    "POSITIVE_CONTINUOUS": { "label": "Sammenhengende søvn", "sentiment": "positive" },
+    "POSITIVE_HIGHLY_RECOVERING": { "label": "Svært restituerende søvn", "sentiment": "positive" },
+    "POSITIVE_OPTIMAL_STRUCTURE": { "label": "Optimal søvnstruktur", "description": "God balanse mellom lett, dyp og REM-søvn.", "sentiment": "positive" },
+    "POSITIVE_RECOVERING": { "label": "Restituerende søvn", "sentiment": "positive" },
+    "POSITIVE_DEEP": { "label": "Dyp søvn", "sentiment": "positive" },
+    "POSITIVE_REFRESHING": { "label": "Forfriskende søvn", "sentiment": "positive" },
+    "POSITIVE_CALM": { "label": "Rolig søvn", "sentiment": "positive" },
+    "POSITIVE_SHORT_BUT_CONTINUOUS": { "label": "Kort, men sammenhengende søvn", "sentiment": "positive" },
+    "POSITIVE_SHORT_BUT_RECOVERING": { "label": "Kort, men restituerende søvn", "sentiment": "positive" },
+    "POSITIVE_SHORT_BUT_DEEP": { "label": "Kort, men dyp søvn", "sentiment": "positive" },
+    "NEGATIVE_LONG_BUT_NOT_ENOUGH_REM": { "label": "Lang søvn, men for lite REM", "sentiment": "negative" },
+    "NEGATIVE_NOT_ENOUGH_REM": { "label": "For lite REM-søvn", "sentiment": "negative" },
+    "NEGATIVE_SHORT_AND_POOR_QUALITY": { "label": "Kort søvn med dårlig kvalitet", "sentiment": "negative" },
+    "NEGATIVE_NOT_RESTORATIVE": { "label": "Lite restituerende søvn", "sentiment": "negative" },
+    "NEGATIVE_LONG_BUT_LIGHT": { "label": "Lang, men lett søvn", "sentiment": "negative" },
+    "NEGATIVE_LONG_BUT_DISCONTINUOUS": { "label": "Lang, men oppstykket søvn", "sentiment": "negative" },
+    "NEGATIVE_LONG_BUT_NOT_RESTORATIVE": { "label": "Lang, men lite restituerende søvn", "sentiment": "negative" },
+    "NEGATIVE_POOR_STRUCTURE": { "label": "Dårlig søvnstruktur", "sentiment": "negative" },
+    "NEGATIVE_LONG_BUT_POOR_QUALITY": { "label": "Lang, men dårlig kvalitet", "sentiment": "negative" },
+    "NEGATIVE_LIGHT": { "label": "Lett søvn", "sentiment": "negative" },
+    "NEGATIVE_DISCONTINUOUS": { "label": "Oppstykket søvn", "sentiment": "negative" },
+    "NEGATIVE_SHORT_AND_POOR_STRUCTURE": { "label": "Kort søvn med dårlig struktur", "sentiment": "negative" },
+    "NEGATIVE_LONG_BUT_RESTLESS": { "label": "Lang, men urolig søvn", "sentiment": "negative" },
+    "NEGATIVE_SHORT_AND_NONRECOVERING": { "label": "Kort og lite restituerende søvn", "sentiment": "negative" },
+    "NEGATIVE_RESTLESS": { "label": "Urolig søvn", "sentiment": "negative" }
+  },
+
+  "sleep_score_insight": {
+    "NONE": { "label": "Ingen innsikt", "sentiment": "neutral" },
+    "POSITIVE_STRESSFUL_DAY": { "label": "Stressende dag, men søvnen holdt", "sentiment": "positive" },
+    "POSITIVE_LATE_BED_TIME": { "label": "Sen leggetid, men god søvn", "sentiment": "positive" },
+    "POSITIVE_EXERCISE": { "label": "Trening bidro positivt til søvnen", "sentiment": "positive" },
+    "POSITIVE_RESTFUL_EVENING": { "label": "Rolig kveld ga bedre søvn", "sentiment": "positive" },
+    "NEGATIVE_HIGHLY_STRESSFUL_DAY": { "label": "Svært stressende dag påvirket søvnen", "sentiment": "negative" },
+    "NEGATIVE_STRESSFUL_DAY": { "label": "Stressende dag påvirket søvnen", "sentiment": "negative" },
+    "NEGATIVE_LATE_STRENUOUS_EXERCISE": { "label": "Sen, hard trening påvirket søvnen", "sentiment": "negative" },
+    "NEGATIVE_LATE_BED_TIME": { "label": "Sen leggetid påvirket søvnen", "sentiment": "negative" },
+    "NEGATIVE_STRENUOUS_EXERCISE": { "label": "Hard trening påvirket søvnen", "sentiment": "negative" },
+    "NEGATIVE_VERY_STRENUOUS_EXERCISE": { "label": "Svært hard trening påvirket søvnen", "sentiment": "negative" },
+    "NEGATIVE_LATE_EXERCISE": { "label": "Sen trening påvirket søvnen", "sentiment": "negative" }
+  },
+
+  "sleep_need_feedback": {
+    "NO_CHANGE_NO_ADJUSTMENTS": { "label": "Uendret søvnbehov", "sentiment": "neutral" },
+    "NO_CHANGE_BALANCED": { "label": "Uendret – balansert", "sentiment": "neutral" },
+    "INCREASED": { "label": "Økt søvnbehov", "sentiment": "neutral" },
+    "HIGHLY_INCREASED": { "label": "Sterkt økt søvnbehov", "sentiment": "negative" },
+    "DECREASED": { "label": "Redusert søvnbehov", "sentiment": "positive" }
+  },
+
+  "sleep_need_training_feedback": {
+    "NO_CHANGE": { "label": "Ingen justering fra trening", "sentiment": "neutral" },
+    "HIGH_ACWR": { "label": "Høy akutt belastning økte behovet", "sentiment": "negative" },
+    "DAILY_ACTIVITY": { "label": "Dagens aktivitet økte behovet", "sentiment": "neutral" },
+    "TODAYS_LOAD": { "label": "Dagens treningsbelastning økte behovet", "sentiment": "neutral" },
+    "CHRONIC": { "label": "Kronisk belastning økte behovet", "sentiment": "negative" },
+    "DAILY_ACTIVITY_AND_HIGH_ACWR": { "label": "Aktivitet + høy belastning økte behovet", "sentiment": "negative" },
+    "TODAYS_LOAD_AND_CHRONIC": { "label": "Dagens + kronisk belastning økte behovet", "sentiment": "negative" },
+    "HIGH_ACWR_AND_CHRONIC": { "label": "Høy akutt + kronisk belastning", "sentiment": "negative" },
+    "DAILY_ACTIVITY_AND_CHRONIC": { "label": "Aktivitet + kronisk belastning", "sentiment": "negative" },
+    "DAILY_ACTIVITY_AND_TODAYS_LOAD": { "label": "Aktivitet + dagens belastning", "sentiment": "neutral" }
+  },
+
+  "body_battery_feedback_type": {
+    "NONE": { "label": "Ingen", "sentiment": "neutral" },
+    "STRESS": { "label": "Stressperiode", "sentiment": "negative" },
+    "STRESS_LONG": { "label": "Lang stressperiode", "sentiment": "negative" },
+    "STRESS_EVENING": { "label": "Stress på kvelden", "sentiment": "negative" },
+    "STRESS_LONG_EVENING": { "label": "Lang stressperiode på kvelden", "sentiment": "negative" },
+    "STRESS_WARNING": { "label": "Stressadvarsel", "sentiment": "negative" },
+    "STRESS_LONG_CONTINUES_WARNING": { "label": "Vedvarende stress – advarsel", "sentiment": "negative" },
+    "NAP_RECOVERING_BODY_BATTERY_INCREASE": { "label": "Blund ga Body Battery-økning", "sentiment": "positive" },
+    "NAP_NOT_RECOVERING_BODY_BATTERY_INCREASE": { "label": "Blund uten særlig restitusjon", "sentiment": "neutral" },
+    "RECOVERY_BODY_BATTERY_INCREASE": { "label": "Hvile ga Body Battery-økning", "sentiment": "positive" },
+    "RECOVERY_LONG_BODY_BATTERY_INCREASE": { "label": "Lang hvile ga god økning", "sentiment": "positive" },
+    "RECOVERY_SHORT": { "label": "Kort hvile", "sentiment": "neutral" },
+    "RECOVERY_EVENING": { "label": "Hvile på kvelden", "sentiment": "positive" },
+    "RECOVERY_BODY_BATTERY_NOT_INCREASE": { "label": "Hvile uten Body Battery-økning", "sentiment": "neutral" },
+    "RECOVERY_LONG_BODY_BATTERY_NOT_INCREASE": { "label": "Lang hvile uten økning", "sentiment": "neutral" },
+    "EXERCISE_TRAINING_EFFECT_BELOW_2": { "label": "Lett økt (treningseffekt <2)", "sentiment": "neutral" },
+    "EXERCISE_TRAINING_EFFECT_2": { "label": "Vedlikeholdende økt (treningseffekt 2)", "sentiment": "positive" },
+    "EXERCISE_TRAINING_EFFECT_3": { "label": "Forbedrende økt (treningseffekt 3)", "sentiment": "positive" },
+    "EXERCISE_TRAINING_EFFECT_4": { "label": "Svært forbedrende økt (treningseffekt 4)", "sentiment": "positive" },
+    "EXERCISE_TRAINING_EFFECT_4_LATE": { "label": "Hard økt sent på dagen (treningseffekt 4)", "sentiment": "neutral" },
+    "EXERCISE_TRAINING_EFFECT_4_GOOD_TIMING": { "label": "Hard økt med god timing (treningseffekt 4)", "sentiment": "positive" },
+    "EXERCISE_TRAINING_EFFECT_5": { "label": "Overbelastende økt (treningseffekt 5)", "sentiment": "negative" },
+    "EXERCISE_TRAINING_EFFECT_5_GOOD_TIMING": { "label": "Svært hard økt med god timing (treningseffekt 5)", "sentiment": "neutral" }
+  },
+
+  "body_battery_short_feedback": {
+    "NONE": { "label": "Ingen", "sentiment": "neutral" },
+    "STRESSFUL_PERIOD": { "label": "Stressende periode", "sentiment": "negative" },
+    "NEED_A_LITTLE_BREAK": { "label": "Trenger en liten pause", "sentiment": "negative" },
+    "TRY_TO_RELAX": { "label": "Prøv å slappe av", "sentiment": "negative" },
+    "RESTFUL_NAP": { "label": "Avslappende blund", "sentiment": "positive" },
+    "NAP": { "label": "Blund", "sentiment": "neutral" },
+    "BODY_BATTERY_RECHARGE": { "label": "Body Battery lades opp", "sentiment": "positive" },
+    "RESTFUL_PERIOD": { "label": "Hvileperiode", "sentiment": "positive" },
+    "LONG_RESTFUL_PERIOD": { "label": "Lang hvileperiode", "sentiment": "positive" },
+    "EASY_RECOVERY": { "label": "Lett restitusjon", "sentiment": "positive" },
+    "EASY_AEROBIC": { "label": "Lett aerob økt", "sentiment": "positive" },
+    "EASY_AEROBIC_BASE": { "label": "Lett aerob base", "sentiment": "positive" },
+    "MAINTAINING_AEROBIC": { "label": "Vedlikeholder aerob form", "sentiment": "positive" },
+    "MAINTAINING_AEROBIC_BASE": { "label": "Vedlikeholder aerob base", "sentiment": "positive" },
+    "MAINTAINING_ANAEROBIC_FITNESS": { "label": "Vedlikeholder anaerob form", "sentiment": "positive" },
+    "MAINTAINING_TEMPO": { "label": "Vedlikeholder tempo", "sentiment": "positive" },
+    "MINOR_ANAEROBIC_EFFECT": { "label": "Liten anaerob effekt", "sentiment": "neutral" },
+    "IMPROVING_AEROBIC": { "label": "Forbedrer aerob form", "sentiment": "positive" },
+    "IMPROVING_AEROBIC_BASE": { "label": "Forbedrer aerob base", "sentiment": "positive" },
+    "IMPROVING_AEROBIC_ENDURANCE": { "label": "Forbedrer aerob utholdenhet", "sentiment": "positive" },
+    "IMPROVING_TEMPO": { "label": "Forbedrer tempo", "sentiment": "positive" },
+    "IMPROVING_ANAEROBIC_FITNESS": { "label": "Forbedrer anaerob form", "sentiment": "positive" },
+    "IMPROVING_LACTATE_THRESHOLD": { "label": "Forbedrer melkesyreterskel", "sentiment": "positive" },
+    "HIGHLY_IMPROVING_AEROBIC": { "label": "Forbedrer aerob form sterkt", "sentiment": "positive" },
+    "HIGHLY_IMPROVING_AEROBIC_ENDURANCE": { "label": "Forbedrer aerob utholdenhet sterkt", "sentiment": "positive" },
+    "HIGHLY_IMPROVING_TEMPO": { "label": "Forbedrer tempo sterkt", "sentiment": "positive" },
+    "HIGHLY_IMPROVING_VO2MAX": { "label": "Forbedrer VO2max sterkt", "sentiment": "positive" },
+    "HIGHLY_IMPROVING_LACTATE_THRESHOLD": { "label": "Forbedrer melkesyreterskel sterkt", "sentiment": "positive" },
+    "OVERREACHING_VO2MAX": { "label": "Overbelaster VO2max", "sentiment": "negative" },
+    "OVERREACHING_TEMPO": { "label": "Overbelaster tempo", "sentiment": "negative" },
+    "OVERREACHING_LACTATE_THRESHOLD": { "label": "Overbelaster melkesyreterskel", "sentiment": "negative" }
+  },
+
+  "training_readiness_level": {
+    "PRIME": { "label": "Optimal", "description": "Kroppen er svært klar for hard trening.", "sentiment": "positive" },
+    "HIGH": { "label": "Høy", "sentiment": "positive" },
+    "MODERATE": { "label": "Moderat", "sentiment": "neutral" },
+    "LOW": { "label": "Lav", "sentiment": "negative" },
+    "POOR": { "label": "Dårlig", "sentiment": "negative" },
+    "NONE": { "label": "Ingen data", "sentiment": "neutral" }
+  },
+
+  "acwr_status": {
+    "LOW": { "label": "Lav belastning", "description": "Akutt belastning er lav i forhold til kronisk (mulig undertrening).", "sentiment": "neutral" },
+    "OPTIMAL": { "label": "Optimal belastning", "sentiment": "positive" },
+    "HIGH": { "label": "Høy belastning", "sentiment": "negative" },
+    "VERY_HIGH": { "label": "Svært høy belastning", "description": "Akutt belastning er mye høyere enn kronisk – økt skaderisiko.", "sentiment": "negative" },
+    "NONE": { "label": "Ingen data", "sentiment": "neutral" }
+  },
+
+  "training_status": {
+    "0": { "label": "Ingen status", "sentiment": "neutral" },
+    "1": { "label": "Detrening", "description": "Formen faller – lite trening over tid.", "sentiment": "negative" },
+    "2": { "label": "Restitusjon", "description": "Lett periode som lar kroppen hente seg inn.", "sentiment": "neutral" },
+    "3": { "label": "Vedlikeholdende", "description": "Du opprettholder form og treningsbelastning.", "sentiment": "positive" },
+    "4": { "label": "Produktiv", "description": "Treningen bygger form.", "sentiment": "positive" },
+    "5": { "label": "Toppform", "description": "Peaking – optimal form for konkurranse.", "sentiment": "positive" },
+    "6": { "label": "Overbelastning", "description": "Overreaching – belastningen er høy; pass på restitusjon.", "sentiment": "negative" },
+    "7": { "label": "Uproduktiv", "description": "Trener hardt, men formen bedres ikke.", "sentiment": "negative" },
+    "8": { "label": "Anstrengt", "description": "Strained – for høy belastning og lav HRV; trenger hvile.", "sentiment": "negative" }
+  },
+
+  "acclimation_trend": {
+    "ACCLIMATIZED": { "label": "Akklimatisert", "sentiment": "positive" },
+    "ACCLIMATIZING": { "label": "Akklimatiserer", "sentiment": "neutral" },
+    "DEACCLIMATIZING": { "label": "Mister akklimatisering", "sentiment": "negative" }
+  },
+
+  "steps_activity_level": {
+    "none": { "label": "Ingen", "sentiment": "neutral" },
+    "sedentary": { "label": "Stillesittende", "sentiment": "neutral" },
+    "sleeping": { "label": "Sover", "sentiment": "neutral" },
+    "generic": { "label": "Generell aktivitet", "sentiment": "neutral" },
+    "active": { "label": "Aktiv", "sentiment": "positive" },
+    "highlyActive": { "label": "Svært aktiv", "sentiment": "positive" }
+  }
+}
