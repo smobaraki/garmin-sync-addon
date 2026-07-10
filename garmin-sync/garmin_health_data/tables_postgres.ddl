@@ -2689,3 +2689,28 @@ COMMENT ON COLUMN strength_set.update_ts IS
 'Timestamp when the record was last modified in the database.';
 
 ----------------------------------------------------------------------------------------
+
+----------------------------------------------------------------------------------------
+-- sync_state: single-row heartbeat consumed by the web client for silent
+-- refresh. `last_data_change_ts` is bumped only on a processing cycle that
+-- actually loaded data, so clients can cheaply detect new data without
+-- scanning every table.
+----------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sync_state (
+    id                  INTEGER PRIMARY KEY DEFAULT 1
+    , last_data_change_ts TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    , last_run_ts         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    , cycles              BIGINT NOT NULL DEFAULT 0
+    , CONSTRAINT sync_state_singleton CHECK (id = 1)
+);
+
+INSERT INTO sync_state (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+COMMENT ON TABLE sync_state IS
+'Single-row heartbeat for web-client silent refresh.';
+COMMENT ON COLUMN sync_state.last_data_change_ts IS
+'Bumped to NOW() only when a processing cycle actually loaded data.';
+COMMENT ON COLUMN sync_state.last_run_ts IS
+'Bumped to NOW() on every processing cycle (whether or not data changed).';
+COMMENT ON COLUMN sync_state.cycles IS
+'Monotonic counter of data-changing cycles.';

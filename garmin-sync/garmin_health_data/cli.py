@@ -22,6 +22,7 @@ from garmin_health_data.constants import GARMIN_FILE_TYPES
 from garmin_health_data.db import (
     _detect_database_url,
     _is_postgresql,
+    bump_sync_state,
     create_tables,
     database_exists,
     get_database_size,
@@ -530,6 +531,11 @@ def extract(
                 )
             else:
                 click.secho("⚠️  No files to process", fg="yellow")
+
+            # Heartbeat for the web client's silent refresh. Mark the cycle
+            # as data-changing only when at least one file was loaded into
+            # the database this run; otherwise just advance last_run_ts.
+            bump_sync_state(db_path, data_changed=total_processed > 0)
 
             click.echo()
 

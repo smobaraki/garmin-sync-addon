@@ -600,3 +600,37 @@ def database_exists(db_path: str = "garmin_data.db") -> bool:
 
     db_file = Path(db_path).expanduser()
     return db_file.exists()
+
+
+def bump_sync_state(db_path: str = "garmin_data.db", data_changed: bool = True) -> None:
+    """
+    Update the single-row ``sync_state`` heartbeat consumed by the web client.
+
+    ``last_run_ts`` is always advanced; ``last_data_change_ts`` and ``cycles``
+    only advance when ``data_changed`` is True (i.e. the cycle actually loaded
+    files). Best-effort: any failure is swallowed so a heartbeat problem can
+    never abort a sync run. Works on both PostgreSQL and SQLite.
+
+    :param db_path: SQLite path (ignored when ``DATABASE_URL`` is set).
+    :param data_changed: Whether this cycle loaded new data.
+    """
+    try:
+        engine = get_engine(db_path)
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO sync_state (id, last_data_change_ts, last_run_ts, cycles) "
+                    "VALUES (1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CASE WHEN :changed THEN 1 ELSE 0 END) "
+                    "ON CONFLICT (id) DO UPDATE SET "
+                    "last_run_ts = CURRENT_TIMESTAMP, "
+                    "last_data_change_ts = CASE WHEN :changed THEN CURRENT_TIMESTAMP "
+                    "ELSE sync_state.last_data_change_ts END, "
+                    "cycles = sync_state.cycles + CASE WHEN :changed THEN 1 ELSE 0 END"
+                ),
+                {"changed": data_changed},
+            )
+    except Exception as e:  # noqa: BLE001 - heartbeat must never break a run
+        click.secho(
+            f"⚠️  sync_state heartbeat update skipped: {type(e).__name__}: {e}",
+            fg="yellow",
+        )
