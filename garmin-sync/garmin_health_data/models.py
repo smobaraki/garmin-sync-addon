@@ -186,6 +186,12 @@ class Activity(Base, UpsertBase):
     hr_time_in_zone_3 = Column(Float)
     hr_time_in_zone_4 = Column(Float)
     hr_time_in_zone_5 = Column(Float)
+
+    # Stamina / performance condition.
+    begin_potential_stamina = Column(Float)
+    end_potential_stamina = Column(Float)
+    min_available_stamina = Column(Float)
+
     average_hr = Column(Float)
     max_hr = Column(Float)
 

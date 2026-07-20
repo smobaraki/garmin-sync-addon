@@ -174,6 +174,12 @@ CREATE TABLE IF NOT EXISTS activity (
     , hr_time_in_zone_3 FLOAT
     , hr_time_in_zone_4 FLOAT
     , hr_time_in_zone_5 FLOAT
+
+    -- Stamina / performance condition.
+    , begin_potential_stamina FLOAT
+    , end_potential_stamina FLOAT
+    , min_available_stamina FLOAT
+
     , average_hr FLOAT
     , max_hr FLOAT
 

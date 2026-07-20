@@ -738,6 +738,10 @@ class GarminProcessor(Processor):
             "hrTimeInZone_3",
             "hrTimeInZone_4",
             "hrTimeInZone_5",
+            # Stamina / performance condition.
+            "beginPotentialStamina",
+            "endPotentialStamina",
+            "minAvailableStamina",
         ]
         for field_name in activity_fields_nullable:
             snake_case_name = self._convert_field_name(field_name)

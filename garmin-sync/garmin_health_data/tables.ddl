@@ -82,6 +82,9 @@ CREATE TABLE IF NOT EXISTS activity (
     , hr_time_in_zone_3 FLOAT              -- Time spent in heart rate zone 3 (aerobic) in seconds.
     , hr_time_in_zone_4 FLOAT              -- Time spent in heart rate zone 4 (lactate threshold) in seconds.
     , hr_time_in_zone_5 FLOAT              -- Time spent in heart rate zone 5 (neuromuscular power) in seconds.
+    , begin_potential_stamina FLOAT       -- Stamina potential at start of activity (0-100).
+    , end_potential_stamina FLOAT         -- Stamina potential at end of activity (0-100).
+    , min_available_stamina FLOAT         -- Minimum available stamina value during activity (0-100).
     , average_hr FLOAT                     -- Average heart rate during the activity in beats per minute.
     , max_hr FLOAT                         -- Maximum heart rate reached during the activity in beats per minute.
     , device_id BIGINT                     -- Unique identifier for the Garmin device used to record the activity.
