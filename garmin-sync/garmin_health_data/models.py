@@ -175,6 +175,26 @@ class Activity(Base, UpsertBase):
     moderate_intensity_minutes = Column(Integer)
     vigorous_intensity_minutes = Column(Integer)
 
+    # Stamina (Garmin endurance feature).
+    begin_potential_stamina = Column(Float)
+    end_potential_stamina = Column(Float)
+    min_available_stamina = Column(Float)
+
+    # Respiration.
+    min_respiration_rate = Column(Float)
+    max_respiration_rate = Column(Float)
+    avg_respiration_rate = Column(Float)
+
+    # Temperature (°C).
+    average_temperature = Column(Float)
+    max_temperature = Column(Float)
+    min_temperature = Column(Float)
+
+    # Other missing summary fields.
+    recovery_heart_rate = Column(Integer)
+    max_vertical_speed = Column(Float)
+    min_activity_lap_duration = Column(Float)
+
     # Metabolism.
     calories = Column(Float)
     bmr_calories = Column(Float)

@@ -834,3 +834,38 @@ CREATE TABLE IF NOT EXISTS activity_ts_metric_downsampled (
 -- the wellness time-series tables (heart_rate, body_battery, etc.).
 CREATE INDEX IF NOT EXISTS activity_ts_metric_downsampled_name_bucket_ts_idx
 ON activity_ts_metric_downsampled (name, bucket_ts DESC);
+
+----------------------------------------------------------------------------------------
+-- strength_user_program: user-created strength training programs
+----------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS strength_user_program (
+    user_id         BIGINT NOT NULL,
+    program_id      TEXT NOT NULL,
+    program_name    TEXT NOT NULL,
+    source          TEXT NOT NULL DEFAULT 'custom',
+    exercises_json  TEXT NOT NULL DEFAULT '[]',
+    create_ts       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_ts       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, program_id),
+    FOREIGN KEY (user_id) REFERENCES "user" (user_id)
+);
+
+----------------------------------------------------------------------------------------
+-- strength_user_session: logged workout sessions
+----------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS strength_user_session (
+    user_id         BIGINT NOT NULL,
+    session_id      TEXT NOT NULL,
+    session_date    DATE NOT NULL,
+    program_id      TEXT NOT NULL,
+    program_name    TEXT NOT NULL,
+    exercises_json  TEXT NOT NULL DEFAULT '[]',
+    completed_at    DATETIME,
+    create_ts       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_ts       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, session_id),
+    FOREIGN KEY (user_id) REFERENCES "user" (user_id)
+);
+
+CREATE INDEX IF NOT EXISTS strength_user_session_date_idx
+ON strength_user_session (session_date);

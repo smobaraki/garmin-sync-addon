@@ -531,6 +531,15 @@ class GarminProcessor(Processor):
         )
         click.echo(f"Processing {activity_type_key} activity data.")
 
+        # Flatten summaryDTO → top-level so the pop()-based field extraction in
+        # _process_activity_base can reach nested fields (stamina, respiration,
+        # temperature, recoveryHR, etc.) without special-casing.
+        summary = activity_data.get("summaryDTO")
+        if isinstance(summary, dict):
+            for k, v in summary.items():
+                if k not in activity_data:
+                    activity_data[k] = v
+
         # Process main activity fields to database.
         activity_id = self._process_activity_base(activity_data, session)
 
@@ -738,10 +747,22 @@ class GarminProcessor(Processor):
             "hrTimeInZone_3",
             "hrTimeInZone_4",
             "hrTimeInZone_5",
-            # Stamina / performance condition.
+            # Stamina.
             "beginPotentialStamina",
             "endPotentialStamina",
             "minAvailableStamina",
+            # Respiration.
+            "minRespirationRate",
+            "maxRespirationRate",
+            "avgRespirationRate",
+            # Temperature.
+            "averageTemperature",
+            "maxTemperature",
+            "minTemperature",
+            # Other.
+            "recoveryHeartRate",
+            "maxVerticalSpeed",
+            "minActivityLapDuration",
         ]
         for field_name in activity_fields_nullable:
             snake_case_name = self._convert_field_name(field_name)
@@ -878,18 +899,11 @@ class GarminProcessor(Processor):
             "powerTimeInZone_5",
             "powerTimeInZone_6",
             "powerTimeInZone_7",
-            # Environmental conditions.
-            "minTemperature",
-            "maxTemperature",
             # Elevation metrics.
             "elevationGain",
             "elevationLoss",
             "minElevation",
             "maxElevation",
-            # Respiration metrics.
-            "minRespirationRate",
-            "maxRespirationRate",
-            "avgRespirationRate",
         ]
         for field_name in cycling_fields:
             snake_case_name = self._convert_field_name(field_name)

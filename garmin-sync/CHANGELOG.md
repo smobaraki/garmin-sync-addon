@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.4
+
+- Fix: store previously missing activity summary fields — stamina
+  (`begin_potential_stamina`, `end_potential_stamina`, `min_available_stamina`),
+  respiration (`min/max/avg_respiration_rate`), temperature (`average/max/min`),
+  `recovery_heart_rate`, `max_vertical_speed`, and `min_activity_lap_duration`.
+  These lived in Garmin's nested `summaryDTO` and were never flattened into the
+  top-level parser, so they ended up in `supplemental_activity_metric` (key-value)
+  or were lost entirely. Also removes duplicate extraction from the cycling
+  processor. New columns are auto-added via `_add_missing_columns`.
+
 ## 1.5.3
 
 - Fix: the routine sync loop no longer dies when a single `extract` run exits

@@ -2720,3 +2720,55 @@ COMMENT ON COLUMN sync_state.last_run_ts IS
 'Bumped to NOW() on every processing cycle (whether or not data changed).';
 COMMENT ON COLUMN sync_state.cycles IS
 'Monotonic counter of data-changing cycles.';
+
+----------------------------------------------------------------------------------------
+-- strength_user_program: user-created strength training programs
+-- Stores programs built via custom builder or imported from the training bank.
+----------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS strength_user_program (
+    user_id         BIGINT NOT NULL REFERENCES "user" (user_id),
+    program_id      TEXT NOT NULL,
+    program_name    TEXT NOT NULL,
+    source          TEXT NOT NULL DEFAULT 'custom',
+    exercises_json  JSONB NOT NULL DEFAULT '[]'::jsonb,
+    create_ts       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_ts       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, program_id)
+);
+
+COMMENT ON TABLE strength_user_program IS
+'User-created strength training programs (custom or imported from training bank).';
+COMMENT ON COLUMN strength_user_program.program_name IS
+'Display name for the program.';
+COMMENT ON COLUMN strength_user_program.source IS
+'Origin: "custom" for user-built, "training-bank" for imported pre-built.';
+COMMENT ON COLUMN strength_user_program.exercises_json IS
+'JSON array of exercise definitions: [{id, name, category, plannedSets, plannedReps}].';
+
+----------------------------------------------------------------------------------------
+-- strength_user_session: logged workout sessions
+-- One row per completed workout session from Forge Strength.
+----------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS strength_user_session (
+    user_id         BIGINT NOT NULL REFERENCES "user" (user_id),
+    session_id      TEXT NOT NULL,
+    session_date    DATE NOT NULL,
+    program_id      TEXT NOT NULL,
+    program_name    TEXT NOT NULL,
+    exercises_json  JSONB NOT NULL DEFAULT '[]'::jsonb,
+    completed_at    TIMESTAMPTZ,
+    create_ts       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_ts       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, session_id)
+);
+
+CREATE INDEX IF NOT EXISTS strength_user_session_date_idx
+    ON strength_user_session USING brin (session_date);
+
+COMMENT ON TABLE strength_user_session IS
+'Logged Forge Strength workout sessions.';
+COMMENT ON COLUMN strength_user_session.exercises_json IS
+'JSON array of exercise sessions: [{exerciseId, exerciseName, sets: [{weight, reps, completed}]}].';
+COMMENT ON COLUMN strength_user_session.completed_at IS
+'Timestamp when the workout was finished. NULL if still in progress.';
+
