@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.6
+
+- Fix: remove incorrect `UNIQUE (user_id, calendar_date)` index on `sleep`
+  that caused duplicate-key violations and quarantined sleep files when a user
+  had multiple sleep sessions sharing a calendar date (e.g. a nap detected as
+  sleep). The canonical unique key is `(user_id, start_ts)`.
+
 ## 1.5.5
 
 - Feature: fetch rich per-activity metadata from the single-activity endpoint

@@ -883,8 +883,6 @@ CREATE TABLE IF NOT EXISTS sleep (
 -- Create indexes on sleep table.
 CREATE UNIQUE INDEX IF NOT EXISTS sleep_user_id_start_ts_unique_idx
 ON sleep (user_id, start_ts);
-CREATE UNIQUE INDEX IF NOT EXISTS sleep_user_id_calendar_date_unique_idx
-ON sleep (user_id, calendar_date);
 CREATE INDEX IF NOT EXISTS sleep_start_ts_brin_idx
 ON sleep USING brin (start_ts);
 CREATE INDEX IF NOT EXISTS sleep_end_ts_brin_idx
