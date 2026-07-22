@@ -188,6 +188,7 @@ class GarminProcessor(Processor):
                 ("GEAR", self._process_gear),
                 ("ACTIVITIES_LIST", self._process_activities),
                 ("EXERCISE_SETS", self._process_exercise_sets),
+                ("ACTIVITY_DETAILS", self._process_activity_details),
                 ("BODY_COMPOSITION", self._process_body_composition),
                 ("FLOORS", self._process_floors),
                 ("HEART_RATE", self._process_heart_rate),
@@ -1160,6 +1161,82 @@ class GarminProcessor(Processor):
             click.echo(
                 f"Processed {len(set_records)} exercise sets "
                 f"for activity {activity_id}."
+            )
+
+    def _process_activity_details(self, file_path: Path, session: Session):
+        """
+        Enrich an existing Activity row with rich summary fields from the
+        per-activity endpoint (stamina, detailed respiration/temperature,
+        recovery heart rate). These fields are absent from the compact
+        ``ACTIVITIES_LIST`` response.
+
+        Extracts ``activity_id`` from the filename, finds the existing
+        ``Activity`` row, and upserts the enrichment fields from
+        ``summaryDTO``. Skipped when the parent activity has not been
+        created yet (e.g. the day's ``ACTIVITIES_LIST`` file is missing or
+        was quarantined).
+
+        :param file_path: Path to the ACTIVITY_DETAILS JSON file.
+        :param session: SQLAlchemy Session object.
+        """
+        import re as _re
+
+        m = _re.match(
+            r"^(\d+)_ACTIVITY_DETAILS_(\d+)_([0-9T:\-Z\.]+)\.json$",
+            file_path.name,
+        )
+        if not m:
+            click.secho(
+                f"⚠️ Cannot parse activity_id from ACTIVITY_DETAILS filename: "
+                f"{file_path.name}",
+                fg="yellow",
+            )
+            return
+        activity_id = int(m.group(2))
+        data = self._load_json_file(file_path)
+        if not data:
+            return
+
+        existing = (
+            session.execute(
+                select(Activity).where(Activity.activity_id == activity_id)
+            )
+            .scalars()
+            .first()
+        )
+        if not existing:
+            click.secho(
+                f"⚠️ Activity {activity_id} not found in DB for DETAILS enrichment "
+                f"(parent ACTIVITIES_LIST file may be missing). Skipping.",
+                fg="yellow",
+            )
+            return
+
+        summary = data.get("summaryDTO") or {}
+        updated = False
+        for col, key in (
+            ("begin_potential_stamina", "beginPotentialStamina"),
+            ("end_potential_stamina", "endPotentialStamina"),
+            ("min_available_stamina", "minAvailableStamina"),
+            ("avg_respiration_rate", "avgRespirationRate"),
+            ("max_respiration_rate", "maxRespirationRate"),
+            ("min_respiration_rate", "minRespirationRate"),
+            ("average_temperature", "averageTemperature"),
+            ("max_temperature", "maxTemperature"),
+            ("min_temperature", "minTemperature"),
+            ("recovery_heart_rate", "recoveryHeartRate"),
+            ("max_vertical_speed", "maxVerticalSpeed"),
+            ("min_activity_lap_duration", "minActivityLapDuration"),
+        ):
+            val = summary.get(key)
+            if val is not None:
+                setattr(existing, col, val)
+                updated = True
+
+        if updated:
+            # update_ts is tracked by the ORM's onupdate trigger
+            click.echo(
+                f"Enriched activity {activity_id} with DETAILS fields."
             )
 
     def _process_supplemental_metrics(

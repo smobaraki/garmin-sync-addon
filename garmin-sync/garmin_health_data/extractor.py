@@ -997,6 +997,14 @@ class GarminExtractor:
                 if exercise_sets_file:
                     downloaded_files.append(exercise_sets_file)
 
+            # Fetch rich per-activity metadata (stamina, recovery HR, detailed
+            # respiration/temperature) from the single-activity endpoint. The
+            # compact ACTIVITIES_LIST response omits these fields.
+            time.sleep(0.1)  # Rate limiting between API calls.
+            details_file = self._extract_activity_details(activity_id, timestamp)
+            if details_file:
+                downloaded_files.append(details_file)
+
             # Rate limiting between activities.
             time.sleep(0.1)
 
@@ -1046,6 +1054,55 @@ class GarminExtractor:
 
         file_size = filepath.stat().st_size / 1024  # KB.
         click.echo(f"Saved: {filename} ({file_size:.1f} KB).")
+        return filepath
+
+    def _extract_activity_details(
+        self, activity_id: int, timestamp: str
+    ) -> Optional[Path]:
+        """
+        Fetch rich per-activity metadata from the single-activity endpoint.
+
+        Garmin's compact ``ACTIVITIES_LIST`` response omits stamina, detailed
+        respiration/temperature, recovery heart rate, and other fields that the
+        per-activity endpoint includes in its ``summaryDTO``. This method downloads
+        and saves the full per-activity payload as JSON so the
+        ``ACTIVITY_DETAILS`` processor can enrich the ``Activity`` row.
+
+        :param activity_id: Garmin activity ID.
+        :param timestamp: ISO 8601 timestamp for consistent filename batching.
+        :return: Path to saved JSON file, or None if the API returns nothing.
+        """
+        try:
+            data = _with_retries(
+                self.garmin_client.get_activity_details, activity_id
+            )
+        except Exception as e:
+            click.secho(
+                f"⚠️  Activity details fetch failed for activity {activity_id}: "
+                f"{type(e).__name__}: {e}. Skipping enrichment.",
+                fg="yellow",
+            )
+            self.failures.append(
+                ExtractionFailure(
+                    data_type="ACTIVITY_DETAILS",
+                    date="",
+                    activity_id=str(activity_id),
+                    error=f"{type(e).__name__}: {e}",
+                )
+            )
+            return None
+
+        if not data or not data.get("summaryDTO"):
+            return None
+
+        filename = (
+            f"{self.user_id}_ACTIVITY_DETAILS_{activity_id}_{timestamp}.json"
+        ).replace(":", "-")
+        filepath = self.ingest_dir / filename
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
         return filepath
 
 
@@ -1188,7 +1245,8 @@ def extract(
             # Extract FIT activity files (if requested).
             activity_files = []
             if data_types is None or (
-                data_types and {"ACTIVITY", "EXERCISE_SETS"} & set(data_types)
+                data_types
+                and {"ACTIVITY", "EXERCISE_SETS", "ACTIVITY_DETAILS"} & set(data_types)
             ):
                 if progress_callback:
                     progress_callback(

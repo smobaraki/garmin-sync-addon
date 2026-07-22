@@ -1,5 +1,5 @@
 name: Garmin Sync
-version: "1.5.4"
+version: "1.5.5"
 slug: garmin-sync
 description: >
   Syncs Garmin Connect health data to PostgreSQL. Set mode to

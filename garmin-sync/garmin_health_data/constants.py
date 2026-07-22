@@ -344,6 +344,17 @@ class GarminDataRegistry:
                 "💪",
             ),
             GarminDataType(
+                "ACTIVITY_DETAILS",
+                "get_activity_details",
+                APIMethodTimeParam.PER_ACTIVITY,
+                "/activity-service/activity/{activity_id}",
+                "Rich per-activity metadata including stamina "
+                "(begin/end/min potential stamina), performance condition, "
+                "detailed respiration/temperature, recovery heart rate, and "
+                "other summary fields absent from the compact ACTIVITIES_LIST.",
+                "📊",
+            ),
+            GarminDataType(
                 "ACTIVITY",
                 "download_activity",
                 APIMethodTimeParam.PER_ACTIVITY,

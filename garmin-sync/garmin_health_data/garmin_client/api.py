@@ -617,6 +617,31 @@ def get_activity_exercise_sets(
     return client._connectapi(url)
 
 
+def get_activity_details(
+    client: "GarminClient", activity_id: Any
+) -> Dict[str, Any]:
+    """
+    Fetch rich per-activity metadata from the single-activity endpoint.
+
+    This endpoint returns the full activity payload including fields absent from the
+    compact ``ACTIVITIES_LIST`` response: stamina (begin/end/min potential stamina),
+    performance condition, detailed respiration/temperature metrics, recovery heart
+    rate, and more. It is the canonical source for aggregate summary fields like
+    stamina that Garmin's compact activity list omits.
+
+    :param client: GarminClient instance.
+    :param activity_id: Garmin activity ID.
+    :return: Full activity payload including ``summaryDTO`` with stamina and other
+        rich fields.
+    :raises ValueError: If ``activity_id`` is not a positive integer.
+    """
+    aid = int(activity_id)
+    if aid <= 0:
+        raise ValueError(f"activity_id must be a positive integer, got {activity_id}")
+    url = f"{ACTIVITY_URL}/{aid}"
+    return client._connectapi(url)
+
+
 # ----------------------------------------------------------------------------------------
 # NO-DATE METADATA METHODS
 # ----------------------------------------------------------------------------------------

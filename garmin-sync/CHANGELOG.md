@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.5
+
+- Feature: fetch rich per-activity metadata from the single-activity endpoint
+  (`/activity-service/activity/{id}`) and enrich Activity rows with stamina
+  (`begin/end/min_potential_stamina`), detailed respiration and temperature
+  metrics, `recovery_heart_rate`, `max_vertical_speed`, and
+  `min_activity_lap_duration`. These fields are absent from the compact
+  ``ACTIVITIES_LIST`` response and were previously NULL for all activities.
+  New ``ACTIVITY_DETAILS`` PER_ACTIVITY data type + ``_process_activity_details``.
+
 ## 1.5.4
 
 - Fix: store previously missing activity summary fields — stamina

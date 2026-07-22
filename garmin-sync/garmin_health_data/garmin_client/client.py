@@ -1001,6 +1001,12 @@ class GarminClient:
         """
         return api.get_activity_exercise_sets(self, activity_id)
 
+    def get_activity_details(self, activity_id: Any) -> Dict[str, Any]:
+        """
+        See :func:`api.get_activity_details`.
+        """
+        return api.get_activity_details(self, activity_id)
+
     def get_personal_record(self) -> Dict[str, Any]:
         """
         See :func:`api.get_personal_record`.
