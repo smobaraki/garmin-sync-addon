@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.7
+
+- Feature: scrape the Garmin training calendar into a new `calendar_event`
+  table. Adds a MONTH-typed `CALENDAR` data type using the
+  `/calendar-service/year/{year}/month/{month}` endpoint, plus a
+  `CalendarEvent` model and `_process_calendar` processor that upserts planned
+  workouts, training-plan sessions, races, and wellness events keyed by
+  `(user_id, item_id)`.
+
 ## 1.5.6
 
 - Fix: remove incorrect `UNIQUE (user_id, calendar_date)` index on `sleep`
