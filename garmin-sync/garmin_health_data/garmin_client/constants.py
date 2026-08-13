@@ -144,6 +144,11 @@ MENSTRUAL_DAYVIEW_URL = "/periodichealth-service/menstrualcycle/dayview"
 MENSTRUAL_CALENDAR_URL = "/periodichealth-service/menstrualcycle/calendar"
 MENSTRUAL_CALENDAR_MAX_DAYS = 92
 
+# Training calendar (planned workouts, training-plan sessions, races, wellness
+# events). Month-based endpoint: {year} + 1-based {month}, unlike the daily
+# wellness endpoints that take a single calendar date.
+CALENDAR_URL = "/calendar-service/year"
+
 # Activities.
 ACTIVITIES_URL = "/activitylist-service/activities/search/activities"
 ACTIVITY_URL = "/activity-service/activity"

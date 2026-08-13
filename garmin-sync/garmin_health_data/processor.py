@@ -7,6 +7,7 @@ processing logic for different Garmin data types including user profiles, activi
 and health metrics.
 """
 
+import hashlib
 import json
 import re
 from collections import OrderedDict
@@ -42,6 +43,7 @@ from garmin_health_data.models import (
     BodyBatteryEvent,
     BodyComposition,
     BreathingDisruption,
+    CalendarEvent,
     CyclingAggMetrics,
     DailyEvents,
     DailySummary,
@@ -186,6 +188,7 @@ class GarminProcessor(Processor):
             [
                 ("USER_PROFILE", self._process_user_profile),
                 ("GEAR", self._process_gear),
+                ("CALENDAR", self._process_calendar),
                 ("ACTIVITIES_LIST", self._process_activities),
                 ("EXERCISE_SETS", self._process_exercise_sets),
                 ("ACTIVITY_DETAILS", self._process_activity_details),
@@ -3001,6 +3004,121 @@ class GarminProcessor(Processor):
         if not ts_str:
             return None
         return self._parse_garmin_iso(ts_str)
+
+    @staticmethod
+    def _extract_calendar_items(data: Any) -> List[Dict[str, Any]]:
+        """
+        Best-effort extraction of the item list from a calendar payload.
+
+        The calendar endpoint returns ``{"calendarItems": [...]}``; this tries
+        the known wrapper keys and falls back to the first list-of-dicts value.
+        """
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for key in ("calendarItems", "calendarEventList", "events", "items"):
+                val = data.get(key)
+                if isinstance(val, list):
+                    return val
+            for val in data.values():
+                if isinstance(val, list) and val and isinstance(val[0], dict):
+                    return val
+        return []
+
+    @staticmethod
+    def _calendar_item_key(item: Dict[str, Any]) -> str:
+        """
+        Compute a stable string key for a calendar item.
+
+        Uses the Garmin calendar-item id when present; otherwise a deterministic
+        hash of the item's identity fields (date, type, title, sport, workout)
+        so id-less wellness/badge items still dedupe across syncs.
+        """
+        gid = item.get("id")
+        if gid is not None:
+            return str(gid)
+        identity = "|".join(
+            str(item.get(k))
+            for k in ("date", "itemType", "title", "sportTypeKey", "workoutId")
+        )
+        return "h:" + hashlib.md5(identity.encode("utf-8")).hexdigest()
+
+    def _parse_calendar_date(self, date_str: Any) -> Optional[date]:
+        """
+        Parse a calendar item's ``date`` field (``YYYY-MM-DD``) into a date.
+
+        :return: Parsed date, or None when the input is missing or malformed.
+        """
+        if not date_str:
+            return None
+        try:
+            return self._parse_date_string(str(date_str)[:10])
+        except (ValueError, TypeError):
+            return None
+
+    def _parse_calendar_ts(self, ts_str: Any) -> Optional[datetime]:
+        """
+        Parse a calendar item's ``startTimestampLocal`` into a naive datetime.
+
+        Stored as a naive local wall clock (matching the Gear treatment of local
+        timestamps); the full original payload is preserved in ``raw``.
+        """
+        if not ts_str:
+            return None
+        try:
+            return self._parse_garmin_iso(str(ts_str))
+        except (ValueError, TypeError):
+            return None
+
+    def _process_calendar(self, file_path: Path, session: Session):
+        """
+        Process a CALENDAR file containing a month of training-calendar events.
+
+        Extracts one row per calendar item (planned workouts, training-plan
+        sessions, races, wellness events) and upserts into the
+        ``calendar_event`` table keyed by ``(user_id, item_id)``. Mutable fields
+        are updated in place on each sync, so a rescheduled or renamed event
+        updates its row rather than accumulating duplicates.
+
+        :param file_path: Path to the CALENDAR JSON file.
+        :param session: SQLAlchemy Session object.
+        """
+        data = self._load_json_file(file_path)
+        items = self._extract_calendar_items(data)
+        if not items:
+            click.secho("⚠️ No calendar items found.", fg="yellow")
+            return
+
+        records = []
+        for item in items:
+            records.append(
+                CalendarEvent(
+                    user_id=int(self.user_id),
+                    item_id=self._calendar_item_key(item),
+                    garmin_id=item.get("id"),
+                    training_plan_id=item.get("trainingPlanId"),
+                    item_type=item.get("itemType"),
+                    title=item.get("title"),
+                    event_date=self._parse_calendar_date(item.get("date")),
+                    start_ts=self._parse_calendar_ts(item.get("startTimestampLocal")),
+                    duration_seconds=item.get("duration"),
+                    distance_meters=item.get("distance"),
+                    calories=item.get("calories"),
+                    is_race=item.get("isRace"),
+                    sport_type_key=item.get("sportTypeKey"),
+                    workout_id=item.get("workoutId"),
+                    location=item.get("location"),
+                    raw=item,
+                )
+            )
+
+        upsert_model_instances(
+            session=session,
+            model_instances=records,
+            conflict_columns=["user_id", "item_id"],
+            on_conflict_update=True,
+        )
+        click.echo(f"Processed {len(records)} calendar event records.")
 
     # ------------------------------------------------------------------
     # Phase 1 daily-mirror helpers and processors

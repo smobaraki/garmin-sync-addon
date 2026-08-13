@@ -619,6 +619,73 @@ class GarminExtractor:
             )
             return []
 
+    def _extract_month_by_month(
+        self, data_type: GarminDataType, start_date: date, end_date: date
+    ) -> List[Path]:
+        """
+        Extract a MONTH-typed Garmin data type one (year, month) at a time.
+
+        The calendar endpoint is month-granular rather than day-granular, so a
+        single call covers a whole month. The months overlapping ``[start_date,
+        end_date]`` are deduplicated (a multi-day window inside one month still
+        fires only one call) and each month's payload is saved to its own file,
+        stamped at midday UTC on the first of the month.
+
+        Failure isolation is per-month; a failed month is recorded in
+        :attr:`failures` and extraction continues with the next month.
+
+        :param data_type: GarminDataType with MONTH time parameter.
+        :param start_date: Start date for data extraction (inclusive).
+        :param end_date: End date for data extraction (inclusive).
+        :return: List of saved file paths.
+        """
+        months = []
+        cursor = date(start_date.year, start_date.month, 1)
+        last_month = date(end_date.year, end_date.month, 1)
+        while cursor <= last_month:
+            months.append((cursor.year, cursor.month))
+            if cursor.month == 12:
+                cursor = date(cursor.year + 1, 1, 1)
+            else:
+                cursor = date(cursor.year, cursor.month + 1, 1)
+
+        saved_files: List[Path] = []
+        for year, month in months:
+            click.echo(
+                f"Fetching {data_type.emoji} {data_type.name} data for "
+                f"{year}-{month:02d}."
+            )
+            try:
+                api_method = getattr(self.garmin_client, data_type.api_method)
+                data = _with_retries(api_method, year, month)
+
+                if data:
+                    saved_files.extend(
+                        self._save_garmin_data(data, data_type, date(year, month, 1))
+                    )
+                else:
+                    click.secho(
+                        f"{data_type.emoji} {data_type.name}: No data for "
+                        f"{year}-{month:02d}.",
+                        fg="yellow",
+                    )
+            except Exception as e:
+                click.secho(
+                    f"⚠️  {data_type.name} {year}-{month:02d} failed: "
+                    f"{type(e).__name__}: {e}. Continuing.",
+                    fg="red",
+                )
+                self.failures.append(
+                    ExtractionFailure(
+                        data_type=data_type.name,
+                        date=f"{year}-{month:02d}",
+                        activity_id="",
+                        error=f"{type(e).__name__}: {e}",
+                    )
+                )
+
+        return saved_files
+
     def _extract_data_by_type(
         self, data_type: GarminDataType, start_date: date, end_date: date
     ) -> List[Path]:
@@ -630,7 +697,7 @@ class GarminExtractor:
         :param end_date: End date for data extraction (inclusive).
         :return: List of saved file paths.
         :raises ValueError: If the data type's ``api_method_time_param`` is not one of
-            the four supported variants.
+            the five supported variants.
         """
         if data_type.api_method_time_param == APIMethodTimeParam.DAILY:
             # One API call per day, per-date error isolation.
@@ -662,6 +729,10 @@ class GarminExtractor:
                 fg="yellow",
             )
             return []
+
+        if data_type.api_method_time_param == APIMethodTimeParam.MONTH:
+            # One API call per (year, month); per-month error isolation.
+            return self._extract_month_by_month(data_type, start_date, end_date)
 
         if data_type.api_method_time_param == APIMethodTimeParam.PER_ACTIVITY:
             # PER_ACTIVITY types (ACTIVITY, EXERCISE_SETS) are iterated per

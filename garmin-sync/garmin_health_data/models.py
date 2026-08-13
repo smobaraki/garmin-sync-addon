@@ -1147,6 +1147,37 @@ class Gear(Base, UpsertBase):
     update_date = Column(DateTime)
 
 
+class CalendarEvent(Base, UpsertBase):
+    """
+    Garmin Connect training-calendar event (planned workout, training-plan
+    session, race, or wellness event).
+
+    One row per ``(user_id, item_id)``; ``item_id`` is the Garmin calendar-item
+    id when present, otherwise a deterministic hash of the item's identity
+    fields. Mutable fields are upserted in place on each sync so a rescheduled
+    or renamed event updates its row instead of accumulating snapshots.
+    """
+
+    __tablename__ = "calendar_event"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    item_id = Column(String, primary_key=True)
+    garmin_id = Column(BigInteger)
+    training_plan_id = Column(BigInteger)
+    item_type = Column(String)
+    title = Column(String)
+    event_date = Column(Date)
+    start_ts = Column(DateTime)
+    duration_seconds = Column(Integer)
+    distance_meters = Column(Float)
+    calories = Column(Integer)
+    is_race = Column(Boolean)
+    sport_type_key = Column(String)
+    workout_id = Column(BigInteger)
+    location = Column(String)
+    raw = Column(JSON)
+
+
 class StrengthExercise(Base, UpsertBase):
     """
     Strength training per-exercise aggregates from summarizedExerciseSets.

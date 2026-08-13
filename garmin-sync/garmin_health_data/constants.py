@@ -26,6 +26,7 @@ class APIMethodTimeParam(Enum):
     DAILY = "daily"  # Single date parameter: get_method(date_str).
     RANGE = "range"  # Date range parameters: get_method(start_str, end_str).
     NO_DATE = "no_date"  # No date parameters: get_method().
+    MONTH = "month"  # (year, month) parameters: get_method(year, month).
     PER_ACTIVITY = "per_activity"  # Per-activity ID parameter: get_method(activity_id).
 
 
@@ -61,6 +62,7 @@ class GarminDataRegistry:
             APIMethodTimeParam.DAILY: [],
             APIMethodTimeParam.RANGE: [],
             APIMethodTimeParam.NO_DATE: [],
+            APIMethodTimeParam.MONTH: [],
             APIMethodTimeParam.PER_ACTIVITY: [],
         }
         self._all_data_types: List[GarminDataType] = []
@@ -329,6 +331,17 @@ class GarminDataRegistry:
                 "model, type, status, usage limit, and begin/end dates.",
                 "⚙️",
             ),
+            # Month Data - (year, month) parameters: get_method(year, month).
+            GarminDataType(
+                "CALENDAR",
+                "get_calendar",
+                APIMethodTimeParam.MONTH,
+                "/calendar-service/year/{year}/month/{month}",
+                "Training calendar: planned workouts, training-plan sessions, "
+                "races, and wellness events for a given month (one call per "
+                "year/month, month is 1-based).",
+                "🗓️",
+            ),
             # Per-Activity Data - Activity ID parameter: get_method(activity_id).
             # Iterated per activity (not per calendar date) by
             # ``GarminExtractor.extract_fit_activities``, which sources the activity
@@ -438,6 +451,15 @@ class GarminDataRegistry:
         :return: List of data types with NO_DATE time parameter.
         """
         return self.get_by_time_param(APIMethodTimeParam.NO_DATE)
+
+    @property
+    def month_data_types(self) -> List[GarminDataType]:
+        """
+        Get all month-based data types (shorthand).
+
+        :return: List of data types with MONTH time parameter.
+        """
+        return self.get_by_time_param(APIMethodTimeParam.MONTH)
 
     @property
     def per_activity_data_types(self) -> List[GarminDataType]:

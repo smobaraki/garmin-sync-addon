@@ -29,6 +29,7 @@ from .constants import (
     ACTIVITIES_URL,
     ACTIVITY_URL,
     BODY_BATTERY_EVENTS_URL,
+    CALENDAR_URL,
     CSV_DOWNLOAD_URL,
     DAILY_EVENTS_URL,
     DAILY_INTENSITY_MINUTES_URL,
@@ -645,6 +646,31 @@ def get_activity_details(
 # ----------------------------------------------------------------------------------------
 # NO-DATE METADATA METHODS
 # ----------------------------------------------------------------------------------------
+
+
+def get_calendar(
+    client: "GarminClient", year: int, month: int
+) -> Optional[Dict[str, Any]]:
+    """
+    Fetch the user's training calendar for a single month.
+
+    Returns the month's calendar payload (planned workouts, training-plan
+    sessions, races, and wellness events) keyed under ``calendarItems``. The
+    endpoint is month-based rather than day-based, so callers pass a 1-based
+    month directly instead of a ``YYYY-MM-DD`` date string.
+
+    :param client: GarminClient instance.
+    :param year: Calendar year (e.g. 2026).
+    :param month: Calendar month, 1-based (1-12).
+    :return: Calendar dictionary, or None when the endpoint returns nothing.
+    :raises ValueError: If ``year`` or ``month`` is out of range.
+    """
+    if not isinstance(year, int) or year < 2000:
+        raise ValueError(f"year must be an integer >= 2000, got {year}")
+    if not isinstance(month, int) or not 1 <= month <= 12:
+        raise ValueError(f"month must be an integer 1-12, got {month}")
+    url = f"{CALENDAR_URL}/{year}/month/{month}"
+    return client._connectapi(url)
 
 
 def get_personal_record(client: "GarminClient") -> Dict[str, Any]:
