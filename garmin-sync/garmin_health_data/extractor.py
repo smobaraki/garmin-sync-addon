@@ -45,6 +45,12 @@ _TRANSIENT_API_EXCEPTIONS: tuple = (
 # worst case, comfortably absorbing typical DNS hiccups and brief outages.
 _RETRY_BACKOFFS: tuple = (2.0, 8.0, 30.0)
 
+# The training calendar is forward-looking: routine syncs only cover "today",
+# but users still expect upcoming months' scheduled workouts to appear. MONTH-
+# typed extraction therefore extends its window this many months past the
+# effective end date (see _extract_month_by_month).
+_CALENDAR_LOOKAHEAD_MONTHS = 2
+
 
 def _with_retries(fn: Callable, *args, **kwargs):
     """
@@ -631,6 +637,10 @@ class GarminExtractor:
         fires only one call) and each month's payload is saved to its own file,
         stamped at midday UTC on the first of the month.
 
+        The window is extended ``_CALENDAR_LOOKAHEAD_MONTHS`` past the effective
+        end date (never earlier than today) so upcoming months' scheduled
+        workouts are captured even though routine syncs only cover "today".
+
         Failure isolation is per-month; a failed month is recorded in
         :attr:`failures` and extraction continues with the next month.
 
@@ -641,7 +651,8 @@ class GarminExtractor:
         """
         months = []
         cursor = date(start_date.year, start_date.month, 1)
-        last_month = date(end_date.year, end_date.month, 1)
+        anchor = max(end_date, date.today())
+        last_month = date(anchor.year, anchor.month + _CALENDAR_LOOKAHEAD_MONTHS, 1)
         while cursor <= last_month:
             months.append((cursor.year, cursor.month))
             if cursor.month == 12:

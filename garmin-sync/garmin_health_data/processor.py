@@ -3070,6 +3070,36 @@ class GarminProcessor(Processor):
         except (ValueError, TypeError):
             return None
 
+    @staticmethod
+    def _calendar_duration_seconds(raw: Any) -> Optional[int]:
+        """
+        Convert a calendar item's ``duration`` field to whole seconds.
+
+        The calendar-service reports duration in milliseconds (verified against
+        the activity-list ``duration`` for the same activity), so divide by 1000.
+        """
+        if raw is None:
+            return None
+        try:
+            return int(round(float(raw) / 1000.0))
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _calendar_distance_meters(raw: Any) -> Optional[float]:
+        """
+        Convert a calendar item's ``distance`` field to meters.
+
+        The calendar-service reports distance in centimetres (verified against
+        the activity-list ``distance`` for the same activity), so divide by 100.
+        """
+        if raw is None:
+            return None
+        try:
+            return float(raw) / 100.0
+        except (TypeError, ValueError):
+            return None
+
     def _process_calendar(self, file_path: Path, session: Session):
         """
         Process a CALENDAR file containing a month of training-calendar events.
@@ -3101,8 +3131,8 @@ class GarminProcessor(Processor):
                     title=item.get("title"),
                     event_date=self._parse_calendar_date(item.get("date")),
                     start_ts=self._parse_calendar_ts(item.get("startTimestampLocal")),
-                    duration_seconds=item.get("duration"),
-                    distance_meters=item.get("distance"),
+                    duration_seconds=self._calendar_duration_seconds(item.get("duration")),
+                    distance_meters=self._calendar_distance_meters(item.get("distance")),
                     calories=item.get("calories"),
                     is_race=item.get("isRace"),
                     sport_type_key=item.get("sportTypeKey"),

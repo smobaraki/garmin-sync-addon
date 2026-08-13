@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.8
+
+- Fix: calendar month was off by one — the `/calendar-service/year/{year}/month/{month}`
+  endpoint is 0-based (January = 0), but `get_calendar` passed a 1-based month, so
+  the sync fetched the *next* month (empty) instead of the current one. The URL now
+  decrements the caller month.
+- Feature: MONTH-typed extraction looks ahead `_CALENDAR_LOOKAHEAD_MONTHS` (2) past
+  the effective end date, so upcoming months' scheduled workouts are captured even
+  though routine syncs only cover "today".
+- Fix: normalize calendar `duration` (milliseconds → seconds) and `distance`
+  (centimetres → metres) when mapping items into `calendar_event`.
+
 ## 1.5.7
 
 - Feature: scrape the Garmin training calendar into a new `calendar_event`

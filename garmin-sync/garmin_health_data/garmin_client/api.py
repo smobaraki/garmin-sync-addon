@@ -669,7 +669,9 @@ def get_calendar(
         raise ValueError(f"year must be an integer >= 2000, got {year}")
     if not isinstance(month, int) or not 1 <= month <= 12:
         raise ValueError(f"month must be an integer 1-12, got {month}")
-    url = f"{CALENDAR_URL}/{year}/month/{month}"
+    # The calendar-service endpoint indexes months from 0 (January = 0), so a
+    # 1-based caller month must be decremented before building the URL.
+    url = f"{CALENDAR_URL}/{year}/month/{month - 1}"
     return client._connectapi(url)
 
 
