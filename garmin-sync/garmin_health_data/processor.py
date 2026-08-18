@@ -3269,6 +3269,7 @@ class GarminProcessor(Processor):
         key_attr: str,
         key_fn,
         field_map: Optional[Dict[str, List[str]]] = None,
+        date_fields: Optional[List[str]] = None,
     ) -> None:
         """Delete-then-insert metadata rows keyed by ``(user_id, <key_attr>)``."""
         session.execute(delete(model).where(model.user_id == int(self.user_id)))
@@ -3279,7 +3280,10 @@ class GarminProcessor(Processor):
                 continue
             kwargs = {"user_id": int(self.user_id), key_attr: str(key), "raw": item}
             for col, srcs in (field_map or {}).items():
-                kwargs[col] = self._first_key(item, srcs)
+                val = self._first_key(item, srcs)
+                if val is not None and date_fields and col in date_fields:
+                    val = self._parse_date_string(str(val)[:10])
+                kwargs[col] = val
             records.append(model(**kwargs))
         if records:
             session.add_all(records)
@@ -3308,6 +3312,7 @@ class GarminProcessor(Processor):
                 "goal_value": ["goalValue", "targetValue"],
                 "calendar_date": ["calendarDate", "date"],
             },
+            date_fields=["calendar_date"],
         )
 
     def _process_devices(self, file_path: Path, session: Session):
