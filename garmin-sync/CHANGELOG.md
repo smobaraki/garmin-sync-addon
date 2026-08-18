@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.10
+
+- Feature: scrape the remaining Garmin Connect endpoints for a full data mirror:
+  per-activity weather, split summaries and gear links; daily endurance score,
+  hill score and nutrition food log; range-based calories, weigh-ins, blood
+  pressure and running tolerance; and no-date metadata (goals, devices, workouts,
+  training plans, pregnancy summary, activity-type catalog, earned badges). All
+  new tables carry a `raw` JSON column so no source field is lost.
+
 ## 1.5.9
 
 - Feature: scrape the user's configured heart-rate and power zone definitions from
