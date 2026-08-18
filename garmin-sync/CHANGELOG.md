@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.13
+
+- Fix: power zones endpoint returned 405 — the correct path is
+  `/biometric-service/powerZones/sports/all`, not the bare `/powerZones`.
+
 ## 1.5.12
 
 - Fix: file classification matched `HEART_RATE_ZONES` files against the
