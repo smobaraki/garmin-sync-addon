@@ -3281,7 +3281,12 @@ class GarminProcessor(Processor):
             kwargs = {"user_id": int(self.user_id), key_attr: str(key), "raw": item}
             for col, srcs in (field_map or {}).items():
                 val = self._first_key(item, srcs)
-                if val is not None and date_fields and col in date_fields:
+                if isinstance(val, (dict, list)):
+                    # Nested structures don't fit a scalar column; the full
+                    # value is preserved in `raw`, so drop to None rather than
+                    # crash the insert (e.g. a dict-shaped `sport` field).
+                    val = None
+                elif val is not None and date_fields and col in date_fields:
                     val = self._parse_date_string(str(val)[:10])
                 kwargs[col] = val
             records.append(model(**kwargs))
@@ -3329,17 +3334,57 @@ class GarminProcessor(Processor):
             },
         )
 
+    @staticmethod
+    def _nested_str(item: Dict[str, Any], keys: List[str], subkeys: List[str]) -> Any:
+        """
+        Extract a string from a possibly-nested field.
+
+        Garmin workout payloads expose ``sport``/``sportType`` as a nested dict
+        (``{sportTypeId, sportTypeKey, displayOrder}``). This walks the candidate
+        keys, unwrapping a dict via ``subkeys`` when present.
+
+        :param item: Source item dict.
+        :param keys: Top-level candidate keys.
+        :param subkeys: Sub-keys to try when the matched value is a dict.
+        :return: The extracted scalar, or None.
+        """
+        for k in keys:
+            v = item.get(k)
+            if v is None:
+                continue
+            if isinstance(v, dict):
+                for sk in subkeys:
+                    if v.get(sk) is not None:
+                        return v.get(sk)
+                continue
+            return v
+        return None
+
     def _process_workouts(self, file_path: Path, session: Session):
         items = self._extract_item_list(self._load_json_file(file_path))
-        self._replace_keyed_user_rows(
-            session, Workout, items, "workout_key",
-            key_fn=lambda it, i: self._first_key(it, ["workoutId", "id"]) or f"w{i}",
-            field_map={
-                "name": ["workoutName", "name"],
-                "description": ["description"],
-                "sport": ["sportType", "sportTypeKey", "sport"],
-            },
-        )
+        session.execute(delete(Workout).where(Workout.user_id == int(self.user_id)))
+        records = []
+        for i, item in enumerate(items):
+            key = self._first_key(item, ["workoutId", "id"]) or f"w{i}"
+            sport = self._nested_str(
+                item, ["sport", "sportType", "sportTypeKey"],
+                ["sportTypeKey", "typeKey", "key"],
+            )
+            records.append(
+                Workout(
+                    user_id=int(self.user_id),
+                    workout_key=str(key),
+                    name=self._first_key(item, ["workoutName", "name"]),
+                    description=self._first_key(item, ["description"]),
+                    sport=str(sport) if sport is not None else None,
+                    raw=item,
+                )
+            )
+        if records:
+            session.add_all(records)
+            click.echo(f"Processed {len(records)} workout records.")
+        else:
+            click.secho("⚠️ No workout records found.", fg="yellow")
 
     def _process_training_plans(self, file_path: Path, session: Session):
         items = self._extract_item_list(self._load_json_file(file_path))
