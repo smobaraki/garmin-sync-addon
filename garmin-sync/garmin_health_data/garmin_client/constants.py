@@ -145,6 +145,21 @@ PERSONAL_RECORD_URL = "/personalrecord-service/personalrecord/prs"
 # the ``userProfilePk`` query parameter rather than in the path.
 GEAR_URL = "/gear-service/gear/filterGear"
 
+# Additional user metadata / performance endpoints (full-mirror scrape).
+GOALS_URL = "/goal-service/goal/goals"
+DEVICES_URL = "/device-service/deviceregistration/devices"
+WORKOUTS_URL = "/workout-service/workouts"
+TRAINING_PLANS_URL = "/trainingplan-service/trainingplan/plans"
+PREGNANCY_SNAPSHOT_URL = "/periodichealth-service/menstrualcycle/pregnancysnapshot"
+ACTIVITY_TYPES_URL = "/activity-service/activity/activityTypes"
+EARNED_BADGES_URL = "/badge-service/badge/earned"
+ENDURANCE_SCORE_URL = "/metrics-service/metrics/endurancescore"
+HILL_SCORE_URL = "/metrics-service/metrics/hillscore"
+RUNNING_TOLERANCE_URL = "/metrics-service/metrics/runningtolerance/stats"
+WEIGH_INS_URL = "/weight-service/weight/range"
+BLOOD_PRESSURE_URL = "/bloodpressure-service/bloodpressure/range"
+NUTRITION_FOOD_LOG_URL = "/nutrition-service/food/logs"
+
 # Menstrual cycle (periodic health). Calendar enforces a hard 92-day max range
 # per request; the API wrapper paginates internally for longer windows.
 MENSTRUAL_DAYVIEW_URL = "/periodichealth-service/menstrualcycle/dayview"

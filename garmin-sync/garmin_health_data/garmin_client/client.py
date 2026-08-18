@@ -1054,6 +1054,57 @@ class GarminClient:
         """
         return api.get_power_zones(self)
 
+    def get_activity_weather(self, activity_id: int) -> Any:
+        return api.get_activity_weather(self, activity_id)
+
+    def get_activity_split_summaries(self, activity_id: int) -> Any:
+        return api.get_activity_split_summaries(self, activity_id)
+
+    def get_activity_gear(self, activity_id: int) -> Any:
+        return api.get_activity_gear(self, activity_id)
+
+    def get_goals(self, status: str = "active") -> Any:
+        return api.get_goals(self, status)
+
+    def get_devices(self) -> Any:
+        return api.get_devices(self)
+
+    def get_workouts(self, start: int = 0, limit: int = 100) -> Any:
+        return api.get_workouts(self, start, limit)
+
+    def get_training_plans(self) -> Any:
+        return api.get_training_plans(self)
+
+    def get_pregnancy_summary(self) -> Any:
+        return api.get_pregnancy_summary(self)
+
+    def get_activity_types(self) -> Any:
+        return api.get_activity_types(self)
+
+    def get_earned_badges(self) -> Any:
+        return api.get_earned_badges(self)
+
+    def get_endurance_score(self, cdate: str) -> Any:
+        return api.get_endurance_score(self, cdate)
+
+    def get_hill_score(self, cdate: str) -> Any:
+        return api.get_hill_score(self, cdate)
+
+    def get_running_tolerance(self, startdate: str, enddate: str) -> Any:
+        return api.get_running_tolerance(self, startdate, enddate)
+
+    def get_calories_daily(self, startdate: str, enddate: str) -> Any:
+        return api.get_calories_daily(self, startdate, enddate)
+
+    def get_weigh_ins(self, startdate: str, enddate: str) -> Any:
+        return api.get_weigh_ins(self, startdate, enddate)
+
+    def get_blood_pressure(self, startdate: str, enddate: str) -> Any:
+        return api.get_blood_pressure(self, startdate, enddate)
+
+    def get_nutrition_daily_food_log(self, cdate: str) -> Any:
+        return api.get_nutrition_daily_food_log(self, cdate)
+
     def download_activity(
         self,
         activity_id: Any,

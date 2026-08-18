@@ -36,23 +36,34 @@ from garmin_health_data.constants import (
 from garmin_health_data.models import (
     Acclimation,
     Activity,
+    ActivityGear,
     ActivityLapMetric,
     ActivityPath,
     ActivitySplitMetric,
+    ActivitySplitSummary,
     ActivityTsMetric,
+    ActivityTypeRef,
+    ActivityWeather,
+    BloodPressure,
     BodyBattery,
     BodyBatteryEvent,
     BodyComposition,
     BreathingDisruption,
     CalendarEvent,
+    CaloriesDaily,
     CyclingAggMetrics,
     DailyEvents,
     DailySummary,
+    Device,
+    EarnedBadge,
+    EnduranceScore,
     FitnessAge,
     Floors,
     Gear,
+    Goal,
     HeartRate,
     HeartRateZone,
+    HillScore,
     HRV,
     HrvDaily,
     Hydration,
@@ -63,12 +74,15 @@ from garmin_health_data.models import (
     MenstrualCycleSummary,
     MenstrualCycleTag,
     Nap,
+    NutritionLog,
     PersonalRecord,
     PowerZone,
+    PregnancySummary,
     RacePredictions,
     Respiration,
     RestingHr,
     RunningAggMetrics,
+    RunningTolerance,
     Sleep,
     SleepLevel,
     SleepMovement,
@@ -82,6 +96,9 @@ from garmin_health_data.models import (
     SupplementalActivityMetric,
     SwimmingAggMetrics,
     TrainingLoad,
+    TrainingPlan,
+    WeighIn,
+    Workout,
     TrainingReadiness,
     User,
     UserProfile,
@@ -193,11 +210,28 @@ class GarminProcessor(Processor):
                 ("GEAR", self._process_gear),
                 ("HEART_RATE_ZONES", self._process_heart_rate_zones),
                 ("POWER_ZONES", self._process_power_zones),
+                ("GOALS", self._process_goals),
+                ("DEVICES", self._process_devices),
+                ("WORKOUTS", self._process_workouts),
+                ("TRAINING_PLANS", self._process_training_plans),
+                ("PREGNANCY", self._process_pregnancy),
+                ("ACTIVITY_TYPES", self._process_activity_types),
+                ("EARNED_BADGES", self._process_earned_badges),
                 ("CALENDAR", self._process_calendar),
                 ("ACTIVITIES_LIST", self._process_activities),
                 ("EXERCISE_SETS", self._process_exercise_sets),
                 ("ACTIVITY_DETAILS", self._process_activity_details),
+                ("ACTIVITY_WEATHER", self._process_activity_weather),
+                ("SPLIT_SUMMARIES", self._process_split_summaries),
+                ("ACTIVITY_GEAR", self._process_activity_gear),
                 ("BODY_COMPOSITION", self._process_body_composition),
+                ("CALORIES_DAILY", self._process_calories_daily),
+                ("WEIGH_INS", self._process_weigh_ins),
+                ("BLOOD_PRESSURE", self._process_blood_pressure),
+                ("RUNNING_TOLERANCE", self._process_running_tolerance),
+                ("ENDURANCE_SCORE", self._process_endurance_score),
+                ("HILL_SCORE", self._process_hill_score),
+                ("NUTRITION", self._process_nutrition),
                 ("FLOORS", self._process_floors),
                 ("HEART_RATE", self._process_heart_rate),
                 ("INTENSITY_MINUTES", self._process_intensity_minutes),
@@ -3197,6 +3231,445 @@ class GarminProcessor(Processor):
             click.echo(f"Processed {len(records)} power-zone records.")
         else:
             click.secho("⚠️ No power-zone records found.", fg="yellow")
+
+    @staticmethod
+    def _extract_item_list(data: Any) -> List[Dict[str, Any]]:
+        """Normalize a list-or-dict payload into a list of item dicts."""
+        if isinstance(data, list):
+            return [d for d in data if isinstance(d, dict)]
+        if isinstance(data, dict):
+            for key in (
+                "items", "results", "list", "data", "goals", "devices",
+                "workouts", "trainingPlans", "badges", "summaries",
+            ):
+                val = data.get(key)
+                if isinstance(val, list):
+                    return [d for d in val if isinstance(d, dict)]
+        return []
+
+    @staticmethod
+    def _first_key(item: Dict[str, Any], keys: List[str]) -> Any:
+        for k in keys:
+            if item.get(k) is not None:
+                return item.get(k)
+        return None
+
+    @staticmethod
+    def _date_from_filename(file_path: Path) -> Optional[date]:
+        m = re.search(r"_(\d{4}-\d{2}-\d{2})T", file_path.name)
+        if m:
+            return date.fromisoformat(m.group(1))
+        return None
+
+    def _replace_keyed_user_rows(
+        self,
+        session: Session,
+        model: Any,
+        items: List[Dict[str, Any]],
+        key_attr: str,
+        key_fn,
+        field_map: Optional[Dict[str, List[str]]] = None,
+    ) -> None:
+        """Delete-then-insert metadata rows keyed by ``(user_id, <key_attr>)``."""
+        session.execute(delete(model).where(model.user_id == int(self.user_id)))
+        records = []
+        for i, item in enumerate(items):
+            key = key_fn(item, i)
+            if key is None:
+                continue
+            kwargs = {"user_id": int(self.user_id), key_attr: str(key), "raw": item}
+            for col, srcs in (field_map or {}).items():
+                kwargs[col] = self._first_key(item, srcs)
+            records.append(model(**kwargs))
+        if records:
+            session.add_all(records)
+            click.echo(f"Processed {len(records)} {model.__tablename__} records.")
+        else:
+            click.secho(f"⚠️ No {model.__tablename__} records found.", fg="yellow")
+
+    def _store_daily_raw(self, session: Session, model: Any, file_path: Path, data: Any) -> None:
+        """Store a single raw row keyed by ``(user_id, calendar_date)``."""
+        if not isinstance(data, dict) and not isinstance(data, list):
+            return
+        cdate = self._date_from_filename(file_path)
+        if cdate is None:
+            return
+        record = model(user_id=int(self.user_id), calendar_date=cdate, raw=data)
+        session.merge(record)
+
+    def _process_goals(self, file_path: Path, session: Session):
+        items = self._extract_item_list(self._load_json_file(file_path))
+        self._replace_keyed_user_rows(
+            session, Goal, items, "goal_key",
+            key_fn=lambda it, i: self._first_key(it, ["goalId", "id"]) or f"g{i}",
+            field_map={
+                "goal_type_key": ["goalTypeKey", "typeKey"],
+                "value": ["value", "currentValue"],
+                "goal_value": ["goalValue", "targetValue"],
+                "calendar_date": ["calendarDate", "date"],
+            },
+        )
+
+    def _process_devices(self, file_path: Path, session: Session):
+        items = self._extract_item_list(self._load_json_file(file_path))
+        self._replace_keyed_user_rows(
+            session, Device, items, "device_key",
+            key_fn=lambda it, i: self._first_key(
+                it, ["deviceIdentifier", "deviceId", "id"]) or f"d{i}",
+            field_map={
+                "device_identifier": ["deviceIdentifier", "deviceId"],
+                "name": ["deviceName", "name", "productName"],
+                "product_name": ["productName"],
+                "device_type": ["type", "deviceType"],
+            },
+        )
+
+    def _process_workouts(self, file_path: Path, session: Session):
+        items = self._extract_item_list(self._load_json_file(file_path))
+        self._replace_keyed_user_rows(
+            session, Workout, items, "workout_key",
+            key_fn=lambda it, i: self._first_key(it, ["workoutId", "id"]) or f"w{i}",
+            field_map={
+                "name": ["workoutName", "name"],
+                "description": ["description"],
+                "sport": ["sportType", "sportTypeKey", "sport"],
+            },
+        )
+
+    def _process_training_plans(self, file_path: Path, session: Session):
+        items = self._extract_item_list(self._load_json_file(file_path))
+        self._replace_keyed_user_rows(
+            session, TrainingPlan, items, "plan_key",
+            key_fn=lambda it, i: self._first_key(
+                it, ["trainingPlanId", "planId", "id"]) or f"p{i}",
+            field_map={"name": ["name", "planName", "trainingPlanName"]},
+        )
+
+    def _process_pregnancy(self, file_path: Path, session: Session):
+        data = self._load_json_file(file_path)
+        if not data:
+            click.secho("⚠️ No pregnancy data found.", fg="yellow")
+            return
+        session.execute(
+            delete(PregnancySummary).where(PregnancySummary.user_id == int(self.user_id))
+        )
+        session.add(PregnancySummary(user_id=int(self.user_id), raw=data))
+        click.echo("Processed pregnancy summary.")
+
+    def _process_activity_types(self, file_path: Path, session: Session):
+        data = self._load_json_file(file_path)
+        items = self._extract_item_list(data)
+        session.execute(delete(ActivityTypeRef))
+        records = []
+        for i, item in enumerate(items):
+            tk = self._first_key(item, ["typeKey", "key"]) or f"t{i}"
+            records.append(
+                ActivityTypeRef(
+                    type_key=str(tk),
+                    type_id=self._first_key(item, ["typeId"]),
+                    parent_type_id=self._first_key(item, ["parentTypeId"]),
+                    sort_order=self._first_key(item, ["sortOrder"]),
+                    is_hidden=self._first_key(item, ["isHidden"]),
+                    raw=item,
+                )
+            )
+        if records:
+            session.add_all(records)
+            click.echo(f"Processed {len(records)} activity-type records.")
+
+    def _process_earned_badges(self, file_path: Path, session: Session):
+        items = self._extract_item_list(self._load_json_file(file_path))
+        self._replace_keyed_user_rows(
+            session, EarnedBadge, items, "badge_key",
+            key_fn=lambda it, i: self._first_key(
+                it, ["badgeUuid", "badgeId", "uuid", "id"]) or f"b{i}",
+            field_map={"name": ["badgeName", "name"]},
+        )
+
+    def _process_endurance_score(self, file_path: Path, session: Session):
+        data = self._load_json_file(file_path)
+        if isinstance(data, dict) and data.get("enduranceScore") is not None:
+            cdate = self._date_from_filename(file_path)
+            if cdate:
+                session.merge(
+                    EnduranceScore(
+                        user_id=int(self.user_id),
+                        calendar_date=cdate,
+                        score=data.get("enduranceScore"),
+                        raw=data,
+                    )
+                )
+
+    def _process_hill_score(self, file_path: Path, session: Session):
+        data = self._load_json_file(file_path)
+        if isinstance(data, dict):
+            cdate = self._date_from_filename(file_path)
+            if cdate:
+                score = self._first_key(
+                    data, ["hillScore", "vo2MaxScore", "score"])
+                session.merge(
+                    HillScore(
+                        user_id=int(self.user_id),
+                        calendar_date=cdate,
+                        score=score,
+                        raw=data,
+                    )
+                )
+
+    def _process_running_tolerance(self, file_path: Path, session: Session):
+        data = self._load_json_file(file_path)
+        items = self._extract_item_list(data)
+        if not items:
+            self._store_daily_raw(session, RunningTolerance, file_path, data)
+            return
+        for item in items:
+            cdate_str = self._first_key(item, ["calendarDate", "date"])
+            try:
+                cdate = date.fromisoformat(str(cdate_str)[:10]) if cdate_str else None
+            except (ValueError, TypeError):
+                cdate = None
+            if cdate is None:
+                cdate = self._date_from_filename(file_path)
+            if cdate is None:
+                continue
+            session.merge(
+                RunningTolerance(
+                    user_id=int(self.user_id),
+                    calendar_date=cdate,
+                    value=self._first_key(item, ["value", "toleranceValue", "score"]),
+                    raw=item,
+                )
+            )
+
+    def _process_calories_daily(self, file_path: Path, session: Session):
+        data = self._load_json_file(file_path)
+        metrics_map = (
+            (data or {}).get("allMetrics", {}).get("metricsMap", {})
+            if isinstance(data, dict)
+            else {}
+        )
+
+        def _pairs(key):
+            for k in (key, str(key)):
+                val = metrics_map.get(k) if metrics_map else None
+                if isinstance(val, list):
+                    return [r for r in val if isinstance(r, list) and len(r) > 1]
+            return []
+
+        active_pairs = _pairs(22)
+        bmr_pairs = _pairs(23)
+        if not active_pairs and not bmr_pairs:
+            self._store_daily_raw(session, CaloriesDaily, file_path, data)
+            return
+
+        active_map = {str(r[0])[:10]: r[1] for r in active_pairs}
+        bmr_map = {str(r[0])[:10]: r[1] for r in bmr_pairs}
+        all_dates = set(active_map) | set(bmr_map)
+        for d in all_dates:
+            try:
+                cdate = date.fromisoformat(d)
+            except ValueError:
+                continue
+            session.merge(
+                CaloriesDaily(
+                    user_id=int(self.user_id),
+                    calendar_date=cdate,
+                    active=active_map.get(d),
+                    bmr=bmr_map.get(d),
+                    raw=data,
+                )
+            )
+
+    def _process_weigh_ins(self, file_path: Path, session: Session):
+        data = self._load_json_file(file_path)
+        items = []
+        if isinstance(data, dict):
+            for key in ("dateWeightList", "weightList", "dailyWeightAvgs"):
+                val = data.get(key)
+                if isinstance(val, list):
+                    items = [d for d in val if isinstance(d, dict)]
+                    break
+        if not items:
+            cdate = self._date_from_filename(file_path)
+            if cdate:
+                session.merge(
+                    WeighIn(
+                        user_id=int(self.user_id),
+                        timestamp=datetime.combine(
+                            cdate, datetime.min.time(), tzinfo=timezone.utc
+                        ),
+                        raw=data,
+                    )
+                )
+            return
+        for item in items:
+            d = self._first_key(item, ["date", "calendarDate", "sampleDate"])
+            ts = None
+            try:
+                ts = date.fromisoformat(str(d)[:10]) if d else None
+            except (ValueError, TypeError):
+                ts = None
+            if ts is None:
+                ts = self._date_from_filename(file_path)
+            if ts is None:
+                continue
+            session.merge(
+                WeighIn(
+                    user_id=int(self.user_id),
+                    timestamp=datetime.combine(ts, datetime.min.time(), tzinfo=timezone.utc),
+                    weight=self._first_key(item, ["weight"]),
+                    bmi=self._first_key(item, ["bmi"]),
+                    body_fat=self._first_key(item, ["bodyFat"]),
+                    raw=item,
+                )
+            )
+
+    def _process_blood_pressure(self, file_path: Path, session: Session):
+        data = self._load_json_file(file_path)
+        items = []
+        if isinstance(data, dict):
+            for key in ("bloodPressureList", "bpList", "measurements"):
+                val = data.get(key)
+                if isinstance(val, list):
+                    items = [d for d in val if isinstance(d, dict)]
+                    break
+        if not items:
+            cdate = self._date_from_filename(file_path)
+            if cdate:
+                session.merge(
+                    BloodPressure(
+                        user_id=int(self.user_id),
+                        timestamp=datetime.combine(
+                            cdate, datetime.min.time(), tzinfo=timezone.utc
+                        ),
+                        raw=data,
+                    )
+                )
+            return
+        for item in items:
+            d = self._first_key(item, ["timestamp", "calendarDate", "date"])
+            ts = None
+            if d is not None:
+                try:
+                    ts = self._parse_garmin_iso(str(d))
+                except Exception:
+                    ts = None
+            if ts is None:
+                cdate = self._date_from_filename(file_path)
+                ts = datetime.combine(cdate, datetime.min.time()) if cdate else None
+            if ts is None:
+                continue
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            session.merge(
+                BloodPressure(
+                    user_id=int(self.user_id),
+                    timestamp=ts,
+                    systolic=self._first_key(item, ["systolic"]),
+                    diastolic=self._first_key(item, ["diastolic"]),
+                    pulse=self._first_key(item, ["pulse", "pulseRate"]),
+                    raw=item,
+                )
+            )
+
+    def _process_nutrition(self, file_path: Path, session: Session):
+        data = self._load_json_file(file_path)
+        cdate = self._date_from_filename(file_path)
+        if cdate is None or not isinstance(data, dict):
+            return
+        session.merge(
+            NutritionLog(
+                user_id=int(self.user_id),
+                calendar_date=cdate,
+                calories=self._first_key(data, ["totalCalories", "calories", "calorie"]),
+                raw=data,
+            )
+        )
+
+    @staticmethod
+    def _activity_id_from_filename(file_path: Path) -> Optional[int]:
+        m = re.search(r"_([A-Z_]+)_(\d+)_", file_path.name)
+        if m:
+            try:
+                return int(m.group(2))
+            except ValueError:
+                return None
+        return None
+
+    def _process_activity_weather(self, file_path: Path, session: Session):
+        activity_id = self._activity_id_from_filename(file_path)
+        data = self._load_json_file(file_path)
+        if activity_id is None or not isinstance(data, dict):
+            return
+        session.merge(
+            ActivityWeather(
+                activity_id=activity_id,
+                temperature=self._first_key(data, ["temperature", "temp"]),
+                apparent_temperature=self._first_key(data, ["apparentTemperature", "apparentTemp"]),
+                humidity=self._first_key(data, ["relativeHumidity", "humidity"]),
+                wind_speed=self._first_key(data, ["windSpeed"]),
+                wind_direction=self._first_key(data, ["windDirection"]),
+                condition=self._first_key(data, ["condition", "weatherType"]),
+                raw=data,
+            )
+        )
+
+    def _process_split_summaries(self, file_path: Path, session: Session):
+        activity_id = self._activity_id_from_filename(file_path)
+        data = self._load_json_file(file_path)
+        if activity_id is None or not isinstance(data, dict):
+            return
+        summaries = (
+            data.get("summaries")
+            if isinstance(data, dict)
+            else (data if isinstance(data, list) else [])
+        ) or []
+        session.execute(
+            delete(ActivitySplitSummary).where(ActivitySplitSummary.activity_id == activity_id)
+        )
+        records = []
+        for i, s in enumerate(summaries):
+            if not isinstance(s, dict):
+                continue
+            records.append(
+                ActivitySplitSummary(
+                    activity_id=activity_id,
+                    split_idx=i,
+                    distance=self._first_key(s, ["distance"]),
+                    duration=self._first_key(s, ["duration"]),
+                    average_speed=self._first_key(s, ["averageSpeed", "avgSpeed"]),
+                    max_speed=self._first_key(s, ["maxSpeed"]),
+                    raw=s,
+                )
+            )
+        if records:
+            session.add_all(records)
+            click.echo(f"Processed {len(records)} split summaries.")
+
+    def _process_activity_gear(self, file_path: Path, session: Session):
+        activity_id = self._activity_id_from_filename(file_path)
+        data = self._load_json_file(file_path)
+        if activity_id is None:
+            return
+        items = self._extract_item_list(data)
+        session.execute(
+            delete(ActivityGear).where(ActivityGear.activity_id == activity_id)
+        )
+        records = []
+        for i, item in enumerate(items):
+            uuid = self._first_key(item, ["uuid"]) or f"g{i}"
+            records.append(
+                ActivityGear(
+                    activity_id=activity_id,
+                    gear_uuid=str(uuid),
+                    gear_pk=self._first_key(item, ["gearPk"]),
+                    display_name=self._first_key(item, ["displayName"]),
+                    raw=item,
+                )
+            )
+        if records:
+            session.add_all(records)
+            click.echo(f"Processed {len(records)} activity gear records.")
 
     @staticmethod
     def _extract_calendar_items(data: Any) -> List[Dict[str, Any]]:

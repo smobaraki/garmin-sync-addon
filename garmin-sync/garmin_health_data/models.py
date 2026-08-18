@@ -1204,6 +1204,226 @@ class PowerZone(Base, UpsertBase):
     raw = Column(JSON)
 
 
+class ActivityWeather(Base, UpsertBase):
+    """Weather record attached to an activity."""
+
+    __tablename__ = "activity_weather"
+
+    activity_id = Column(
+        BigInteger,
+        ForeignKey("activity.activity_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    temperature = Column(Float)
+    apparent_temperature = Column(Float)
+    humidity = Column(Float)
+    wind_speed = Column(Float)
+    wind_direction = Column(Integer)
+    condition = Column(String)
+    raw = Column(JSON)
+
+
+class ActivitySplitSummary(Base, UpsertBase):
+    """Garmin's own per-split summaries for an activity."""
+
+    __tablename__ = "activity_split_summary"
+
+    activity_id = Column(
+        BigInteger,
+        ForeignKey("activity.activity_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    split_idx = Column(Integer, primary_key=True)
+    distance = Column(Float)
+    duration = Column(Float)
+    average_speed = Column(Float)
+    max_speed = Column(Float)
+    raw = Column(JSON)
+
+
+class ActivityGear(Base, UpsertBase):
+    """Gear items used during an activity."""
+
+    __tablename__ = "activity_gear"
+
+    activity_id = Column(
+        BigInteger,
+        ForeignKey("activity.activity_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    gear_uuid = Column(String, primary_key=True)
+    gear_pk = Column(BigInteger)
+    display_name = Column(String)
+    raw = Column(JSON)
+
+
+class Goal(Base, UpsertBase):
+    """User daily goals (steps, sleep, active minutes, floors, etc.)."""
+
+    __tablename__ = "goal"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    goal_key = Column(String, primary_key=True)
+    goal_type_key = Column(String)
+    value = Column(Float)
+    goal_value = Column(Float)
+    calendar_date = Column(Date)
+    raw = Column(JSON)
+
+
+class Device(Base, UpsertBase):
+    """User's registered Garmin devices."""
+
+    __tablename__ = "device"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    device_key = Column(String, primary_key=True)
+    device_identifier = Column(BigInteger)
+    name = Column(String)
+    product_name = Column(String)
+    device_type = Column(String)
+    raw = Column(JSON)
+
+
+class Workout(Base, UpsertBase):
+    """User's workout library (interval/step definitions)."""
+
+    __tablename__ = "workout"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    workout_key = Column(String, primary_key=True)
+    name = Column(String)
+    description = Column(String)
+    sport = Column(String)
+    raw = Column(JSON)
+
+
+class TrainingPlan(Base, UpsertBase):
+    """User's training plans."""
+
+    __tablename__ = "training_plan"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    plan_key = Column(String, primary_key=True)
+    name = Column(String)
+    raw = Column(JSON)
+
+
+class PregnancySummary(Base, UpsertBase):
+    """Pregnancy summary snapshot (empty when not applicable)."""
+
+    __tablename__ = "pregnancy_summary"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    raw = Column(JSON)
+
+
+class ActivityTypeRef(Base, UpsertBase):
+    """Static Garmin activity-type catalog."""
+
+    __tablename__ = "activity_type_ref"
+
+    type_key = Column(String, primary_key=True)
+    type_id = Column(Integer)
+    parent_type_id = Column(Integer)
+    sort_order = Column(Integer)
+    is_hidden = Column(Boolean)
+    raw = Column(JSON)
+
+
+class EarnedBadge(Base, UpsertBase):
+    """User's earned badges."""
+
+    __tablename__ = "earned_badge"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    badge_key = Column(String, primary_key=True)
+    name = Column(String)
+    raw = Column(JSON)
+
+
+class EnduranceScore(Base, UpsertBase):
+    """Daily endurance score."""
+
+    __tablename__ = "endurance_score"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    score = Column(Float)
+    raw = Column(JSON)
+
+
+class HillScore(Base, UpsertBase):
+    """Daily hill score (climbing endurance)."""
+
+    __tablename__ = "hill_score"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    score = Column(Float)
+    raw = Column(JSON)
+
+
+class RunningTolerance(Base, UpsertBase):
+    """Running tolerance trend."""
+
+    __tablename__ = "running_tolerance"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    value = Column(Float)
+    raw = Column(JSON)
+
+
+class CaloriesDaily(Base, UpsertBase):
+    """Daily active + resting (BMR) calories."""
+
+    __tablename__ = "calories_daily"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    active = Column(Float)
+    bmr = Column(Float)
+    raw = Column(JSON)
+
+
+class WeighIn(Base, UpsertBase):
+    """Standalone manual weigh-ins."""
+
+    __tablename__ = "weigh_in"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    timestamp = Column(DateTime(timezone=True), primary_key=True)
+    weight = Column(Float)
+    bmi = Column(Float)
+    body_fat = Column(Float)
+    raw = Column(JSON)
+
+
+class BloodPressure(Base, UpsertBase):
+    """Blood pressure measurements."""
+
+    __tablename__ = "blood_pressure"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    timestamp = Column(DateTime(timezone=True), primary_key=True)
+    systolic = Column(Integer)
+    diastolic = Column(Integer)
+    pulse = Column(Integer)
+    raw = Column(JSON)
+
+
+class NutritionLog(Base, UpsertBase):
+    """Daily nutrition food-log summary."""
+
+    __tablename__ = "nutrition_log"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    calendar_date = Column(Date, primary_key=True)
+    calories = Column(Float)
+    raw = Column(JSON)
+
+
 class CalendarEvent(Base, UpsertBase):
     """
     Garmin Connect training-calendar event (planned workout, training-plan

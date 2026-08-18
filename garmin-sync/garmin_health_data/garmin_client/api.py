@@ -27,7 +27,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from .constants import (
     ACTIVITIES_URL,
+    ACTIVITY_TYPES_URL,
     ACTIVITY_URL,
+    BLOOD_PRESSURE_URL,
     BODY_BATTERY_EVENTS_URL,
     CALENDAR_URL,
     CSV_DOWNLOAD_URL,
@@ -38,13 +40,18 @@ from .constants import (
     DAILY_SPO2_URL,
     DAILY_STRESS_URL,
     DAILY_SUMMARY_URL,
+    DEVICES_URL,
+    EARNED_BADGES_URL,
+    ENDURANCE_SCORE_URL,
     FIT_DOWNLOAD_URL,
     FITNESS_AGE_URL,
     FLOORS_CHART_DAILY_URL,
     GEAR_URL,
+    GOALS_URL,
     GPX_DOWNLOAD_URL,
     HEART_RATES_DAILY_URL,
     HEART_RATE_ZONES_URL,
+    HILL_SCORE_URL,
     HRV_URL,
     HYDRATION_DAILY_URL,
     KML_DOWNLOAD_URL,
@@ -53,16 +60,22 @@ from .constants import (
     MENSTRUAL_CALENDAR_MAX_DAYS,
     MENSTRUAL_CALENDAR_URL,
     MENSTRUAL_DAYVIEW_URL,
+    NUTRITION_FOOD_LOG_URL,
     PERSONAL_RECORD_URL,
     POWER_ZONES_URL,
+    PREGNANCY_SNAPSHOT_URL,
     RACE_PREDICTOR_URL,
     RESTING_HR_URL,
+    RUNNING_TOLERANCE_URL,
     TCX_DOWNLOAD_URL,
+    TRAINING_PLANS_URL,
     TRAINING_READINESS_URL,
     TRAINING_STATUS_URL,
     USER_SETTINGS_URL,
     USER_SUMMARY_CHART_URL,
+    WEIGH_INS_URL,
     WEIGHT_DATERANGE_URL,
+    WORKOUTS_URL,
 )
 
 if TYPE_CHECKING:
@@ -803,6 +816,131 @@ def get_gear(client: "GarminClient") -> List[Dict[str, Any]]:
     if response is None:
         return []
     return response
+
+
+# ----------------------------------------------------------------------------------------
+# ADDITIONAL FULL-MIRROR ENDPOINTS
+# ----------------------------------------------------------------------------------------
+
+
+def get_activity_weather(client: "GarminClient", activity_id: int) -> Any:
+    """Fetch the weather record attached to an activity."""
+    return client._connectapi(f"{ACTIVITY_URL}/{activity_id}/weather")
+
+
+def get_activity_split_summaries(client: "GarminClient", activity_id: int) -> Any:
+    """Fetch Garmin's own per-split pace/time/distance summaries for an activity."""
+    return client._connectapi(f"{ACTIVITY_URL}/{activity_id}/split_summaries")
+
+
+def get_activity_gear(client: "GarminClient", activity_id: int) -> Any:
+    """Fetch the gear items used during an activity."""
+    return client._connectapi(GEAR_URL, params={"activityId": str(activity_id)})
+
+
+def get_goals(client: "GarminClient", status: str = "active") -> Any:
+    """Fetch the user's goals (active, future, or past)."""
+    if status not in ("active", "future", "past"):
+        raise ValueError(f"status must be one of 'active', 'future', 'past'")
+    return client._connectapi(
+        GOALS_URL,
+        params={"status": status, "start": "0", "limit": "50", "sortOrder": "asc"},
+    )
+
+
+def get_devices(client: "GarminClient") -> Any:
+    """Fetch the user's registered devices."""
+    return client._connectapi(DEVICES_URL)
+
+
+def get_workouts(client: "GarminClient", start: int = 0, limit: int = 100) -> Any:
+    """Fetch the user's workout library."""
+    return client._connectapi(
+        WORKOUTS_URL, params={"start": str(start), "limit": str(limit)}
+    )
+
+
+def get_training_plans(client: "GarminClient") -> Any:
+    """Fetch the user's training plans."""
+    return client._connectapi(TRAINING_PLANS_URL)
+
+
+def get_pregnancy_summary(client: "GarminClient") -> Any:
+    """Fetch the pregnancy snapshot for the current user (empty if N/A)."""
+    return client._connectapi(PREGNANCY_SNAPSHOT_URL)
+
+
+def get_activity_types(client: "GarminClient") -> Any:
+    """Fetch the static Garmin activity-type catalog."""
+    return client._connectapi(ACTIVITY_TYPES_URL)
+
+
+def get_earned_badges(client: "GarminClient") -> Any:
+    """Fetch the user's earned badges."""
+    return client._connectapi(EARNED_BADGES_URL)
+
+
+def get_endurance_score(client: "GarminClient", cdate: str) -> Any:
+    """Fetch the endurance score for a single day."""
+    cdate = _validate_date_format(cdate, "cdate")
+    return client._connectapi(ENDURANCE_SCORE_URL, params={"calendarDate": cdate})
+
+
+def get_hill_score(client: "GarminClient", cdate: str) -> Any:
+    """Fetch the hill score for a single day."""
+    cdate = _validate_date_format(cdate, "cdate")
+    return client._connectapi(HILL_SCORE_URL, params={"calendarDate": cdate})
+
+
+def get_running_tolerance(
+    client: "GarminClient", startdate: str, enddate: str
+) -> Any:
+    """Fetch running tolerance for a date range (daily aggregation)."""
+    startdate = _validate_date_format(startdate, "startdate")
+    enddate = _validate_date_format(enddate, "enddate")
+    return client._connectapi(
+        RUNNING_TOLERANCE_URL,
+        params={
+            "startDate": startdate,
+            "endDate": enddate,
+            "aggregation": "daily",
+        },
+    )
+
+
+def get_calories_daily(client: "GarminClient", startdate: str, enddate: str) -> Any:
+    """Fetch daily active + resting (BMR) calories for a date range."""
+    startdate = _validate_date_format(startdate, "startdate")
+    enddate = _validate_date_format(enddate, "enddate")
+    url = f"{RESTING_HR_URL}/{client.display_name}"
+    return client._connectapi(
+        url,
+        params={"fromDate": startdate, "untilDate": enddate, "metricId": [22, 23]},
+    )
+
+
+def get_weigh_ins(client: "GarminClient", startdate: str, enddate: str) -> Any:
+    """Fetch standalone weigh-ins for a date range."""
+    startdate = _validate_date_format(startdate, "startdate")
+    enddate = _validate_date_format(enddate, "enddate")
+    return client._connectapi(
+        f"{WEIGH_INS_URL}/{startdate}/{enddate}", params={"includeAll": True}
+    )
+
+
+def get_blood_pressure(client: "GarminClient", startdate: str, enddate: str) -> Any:
+    """Fetch blood pressure measurements for a date range."""
+    startdate = _validate_date_format(startdate, "startdate")
+    enddate = _validate_date_format(enddate, "enddate")
+    return client._connectapi(
+        f"{BLOOD_PRESSURE_URL}/{startdate}/{enddate}", params={"includeAll": True}
+    )
+
+
+def get_nutrition_daily_food_log(client: "GarminClient", cdate: str) -> Any:
+    """Fetch the daily nutrition food-log summary for a date."""
+    cdate = _validate_date_format(cdate, "cdate")
+    return client._connectapi(f"{NUTRITION_FOOD_LOG_URL}/{cdate}")
 
 
 # ----------------------------------------------------------------------------------------

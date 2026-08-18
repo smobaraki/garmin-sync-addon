@@ -1087,6 +1087,22 @@ class GarminExtractor:
             if details_file:
                 downloaded_files.append(details_file)
 
+            # Fetch per-activity weather, split summaries, and gear links.
+            time.sleep(0.1)
+            weather_file = self._extract_activity_weather(activity_id, timestamp)
+            if weather_file:
+                downloaded_files.append(weather_file)
+
+            time.sleep(0.1)
+            split_file = self._extract_split_summaries(activity_id, timestamp)
+            if split_file:
+                downloaded_files.append(split_file)
+
+            time.sleep(0.1)
+            gear_file = self._extract_activity_gear(activity_id, timestamp)
+            if gear_file:
+                downloaded_files.append(gear_file)
+
             # Rate limiting between activities.
             time.sleep(0.1)
 
@@ -1186,6 +1202,68 @@ class GarminExtractor:
             json.dump(data, f, indent=2)
 
         return filepath
+
+    def _extract_activity_json(
+        self,
+        data_type_name: str,
+        api_method_name: str,
+        activity_id: int,
+        timestamp: str,
+    ) -> Optional[Path]:
+        """
+        Fetch a per-activity JSON sub-resource and save it to a file.
+
+        Generic helper for the small per-activity JSON endpoints (weather, split
+        summaries, gear). Returns None when the endpoint returns nothing.
+        """
+        try:
+            api_method = getattr(self.garmin_client, api_method_name)
+            data = _with_retries(api_method, activity_id)
+        except Exception as e:
+            click.secho(
+                f"⚠️  {data_type_name} fetch failed for activity {activity_id}: "
+                f"{type(e).__name__}: {e}. Skipping.",
+                fg="yellow",
+            )
+            return None
+
+        if not data:
+            return None
+        # Weather/split_summaries return dicts; gear returns a list. Both are
+        # truthy when non-empty.
+        if isinstance(data, dict) and not any(data.values()):
+            return None
+
+        filename = (
+            f"{self.user_id}_{data_type_name}_{activity_id}_{timestamp}.json"
+        ).replace(":", "-")
+        filepath = self.ingest_dir / filename
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+        return filepath
+
+    def _extract_activity_weather(
+        self, activity_id: int, timestamp: str
+    ) -> Optional[Path]:
+        return self._extract_activity_json(
+            "ACTIVITY_WEATHER", "get_activity_weather", activity_id, timestamp
+        )
+
+    def _extract_split_summaries(
+        self, activity_id: int, timestamp: str
+    ) -> Optional[Path]:
+        return self._extract_activity_json(
+            "SPLIT_SUMMARIES", "get_activity_split_summaries", activity_id, timestamp
+        )
+
+    def _extract_activity_gear(
+        self, activity_id: int, timestamp: str
+    ) -> Optional[Path]:
+        return self._extract_activity_json(
+            "ACTIVITY_GEAR", "get_activity_gear", activity_id, timestamp
+        )
 
 
 def extract(
@@ -1328,7 +1406,10 @@ def extract(
             activity_files = []
             if data_types is None or (
                 data_types
-                and {"ACTIVITY", "EXERCISE_SETS", "ACTIVITY_DETAILS"} & set(data_types)
+                and {
+                    "ACTIVITY", "EXERCISE_SETS", "ACTIVITY_DETAILS",
+                    "ACTIVITY_WEATHER", "SPLIT_SUMMARIES", "ACTIVITY_GEAR",
+                } & set(data_types)
             ):
                 if progress_callback:
                     progress_callback(
