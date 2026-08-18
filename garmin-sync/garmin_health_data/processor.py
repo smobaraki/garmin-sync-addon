@@ -10,6 +10,7 @@ and health metrics.
 import hashlib
 import json
 import re
+import copy
 from collections import OrderedDict
 from datetime import datetime, timezone, timedelta, date
 from pathlib import Path
@@ -539,6 +540,11 @@ class GarminProcessor(Processor):
         )
         click.echo(f"Processing {activity_type_key} activity data.")
 
+        # Snapshot the full payload before any pop() so unmapped fields (split
+        # summaries, personal records, device/course name, nested DTOs, etc.)
+        # are preserved verbatim in activity.raw.
+        raw_activity = copy.deepcopy(activity_data)
+
         # Flatten summaryDTO → top-level so the pop()-based field extraction in
         # _process_activity_base can reach nested fields (stamina, respiration,
         # temperature, recoveryHR, etc.) without special-casing.
@@ -549,7 +555,7 @@ class GarminProcessor(Processor):
                     activity_data[k] = v
 
         # Process main activity fields to database.
-        activity_id = self._process_activity_base(activity_data, session)
+        activity_id = self._process_activity_base(activity_data, session, raw_activity)
 
         # Skip processing additional metrics if `activity_id` is None
         # (no valid activity data).
@@ -575,7 +581,10 @@ class GarminProcessor(Processor):
         click.echo(f"Processed {activity_type_key} activity with ID {activity_id}.")
 
     def _process_activity_base(
-        self, activity_data: Dict[str, Any], session: Session
+        self,
+        activity_data: Dict[str, Any],
+        session: Session,
+        raw_activity: Optional[Dict[str, Any]] = None,
     ) -> Optional[int]:
         """
         Extract activity fields and process to database using upsert with composite
@@ -583,6 +592,9 @@ class GarminProcessor(Processor):
 
         Uses pop() to remove processed fields from activity_data, enabling automatic
         supplemental metrics extraction without hardcoded exclusion lists.
+
+        ``raw_activity`` (when provided) is the full pre-pop payload snapshot, stored
+        verbatim on ``activity.raw`` so no source field is lost.
 
         Returns ``None`` when the activity is skipped (empty record, or a duplicate
         ``(user_id, start_ts)`` collision with an existing activity in the database).
@@ -592,6 +604,7 @@ class GarminProcessor(Processor):
 
         :param activity_data: Activity data from JSON (will be modified by pop()).
         :param session: SQLAlchemy Session object.
+        :param raw_activity: Optional full-payload snapshot to store in ``raw``.
         :return: Activity ID from the processed record, or ``None`` if skipped.
         """
         # Extract activity ID.
@@ -670,6 +683,8 @@ class GarminProcessor(Processor):
             "start_ts": start_ts,
             "end_ts": end_ts,
             "timezone_offset_hours": timezone_offset_hours,
+            # Full source payload (when a pre-pop snapshot was captured).
+            "raw": raw_activity,
         }
 
         # Non-nullable fields requiring custom mapping.
@@ -1240,6 +1255,11 @@ class GarminProcessor(Processor):
                 setattr(existing, col, val)
                 updated = True
 
+        # Preserve the full DETAILS payload verbatim (splits, laps, weather,
+        # personal records and any field not mapped to a dedicated column).
+        existing.raw_details = data
+        updated = True
+
         if updated:
             # update_ts is tracked by the ORM's onupdate trigger
             click.echo(
@@ -1313,8 +1333,12 @@ class GarminProcessor(Processor):
         # Load and parse the JSON data.
         sleep_data = self._load_json_file(file_path)
 
+        # Snapshot the full payload before pop() so unmapped fields are preserved
+        # verbatim in sleep.raw.
+        raw_sleep = copy.deepcopy(sleep_data)
+
         # Process main sleep record to database.
-        sleep_id = self._process_sleep_base(sleep_data, session)
+        sleep_id = self._process_sleep_base(sleep_data, session, raw_sleep)
 
         # Skip timeseries processing if `sleep_id` is None
         # (no valid sleep data).
@@ -1330,7 +1354,10 @@ class GarminProcessor(Processor):
         self._process_sleep_breathing_disruption(sleep_data, sleep_id, session)
 
     def _process_sleep_base(
-        self, sleep_data: Dict[str, Any], session: Session
+        self,
+        sleep_data: Dict[str, Any],
+        session: Session,
+        raw_sleep: Optional[Dict[str, Any]] = None,
     ) -> Optional[int]:
         """
         Extract sleep fields and process to database using upsert with composite primary
@@ -1339,8 +1366,12 @@ class GarminProcessor(Processor):
         Uses pop() to remove processed fields from sleep_data, enabling time-series
         extraction without hardcoded exclusion lists.
 
+        ``raw_sleep`` (when provided) is the full pre-pop payload snapshot, stored
+        verbatim on ``sleep.raw`` so no source field is lost.
+
         :param sleep_data: Sleep data from JSON (will be modified by pop()).
         :param session: SQLAlchemy Session object.
+        :param raw_sleep: Optional full-payload snapshot to store in ``raw``.
         :return: Sleep ID from the processed record, if the record was created.
         """
         # Extract dailySleepDTO section.
@@ -1380,6 +1411,8 @@ class GarminProcessor(Processor):
             "start_ts": start_ts,
             "end_ts": end_ts,
             "timezone_offset_hours": timezone_offset_hours,
+            # Full source payload (when a pre-pop snapshot was captured).
+            "raw": raw_sleep,
         }
 
         # Remove the id field from JSON (not used: sleep_id is auto-generated).

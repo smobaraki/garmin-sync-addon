@@ -238,6 +238,15 @@ class Activity(Base, UpsertBase):
     auto_calc_calories = Column(Boolean, nullable=False, server_default=text("0"))
     ts_data_available = Column(Boolean, nullable=False, server_default=text("0"))
 
+    # Full source payload from the ACTIVITIES_LIST item (split summaries,
+    # personal records, device name, course name, and any other field not
+    # mapped to a dedicated column are preserved here).
+    raw = Column(JSON)
+
+    # Full source payload from the per-activity DETAILS endpoint
+    # (/activity-service/activity/{id}) — richer than ACTIVITIES_LIST.
+    raw_details = Column(JSON)
+
 
 class SwimmingAggMetrics(Base, UpsertBase):
     """
@@ -509,6 +518,10 @@ class Sleep(Base, UpsertBase):
     next_sleep_need_history_adj = Column(String)
     next_sleep_need_hrv_adj = Column(String)
     next_sleep_need_nap_adj = Column(String)
+
+    # Full source payload from the SLEEP endpoint (any field not mapped to a
+    # dedicated column is preserved here).
+    raw = Column(JSON)
 
 
 class SleepLevel(Base, InsertBase):
