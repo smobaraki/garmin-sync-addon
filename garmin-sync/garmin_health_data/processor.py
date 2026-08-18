@@ -3020,6 +3020,13 @@ class GarminProcessor(Processor):
             click.secho("⚠️ No gear data found.", fg="yellow")
             return
 
+        # Replace semantics: remove the user's existing gear rows before
+        # inserting the freshly fetched set, so gear deleted in Garmin Connect
+        # disappears from our copy instead of lingering forever.
+        session.execute(
+            delete(Gear).where(Gear.user_id == int(self.user_id))
+        )
+
         gear_records = []
         for item in gear_data:
             uuid = item.get("uuid")
@@ -3836,6 +3843,25 @@ class GarminProcessor(Processor):
         """
         data = self._load_json_file(file_path)
         items = self._extract_calendar_items(data)
+
+        # Replace semantics scoped to this file's month: delete the user's
+        # calendar events in that month before inserting the freshly fetched
+        # set, so events removed in Garmin Connect disappear from our copy.
+        month_date = self._date_from_filename(file_path)
+        if month_date is not None:
+            month_start = month_date.replace(day=1)
+            if month_start.month == 12:
+                month_end = date(month_start.year + 1, 1, 1)
+            else:
+                month_end = date(month_start.year, month_start.month + 1, 1)
+            session.execute(
+                delete(CalendarEvent).where(
+                    CalendarEvent.user_id == int(self.user_id),
+                    CalendarEvent.event_date >= month_start,
+                    CalendarEvent.event_date < month_end,
+                )
+            )
+
         if not items:
             click.secho("⚠️ No calendar items found.", fg="yellow")
             return

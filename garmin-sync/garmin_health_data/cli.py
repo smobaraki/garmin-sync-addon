@@ -1297,5 +1297,98 @@ def migrate_cascade_cmd(db_path: str, dry_run: bool, no_backup: bool):
             click.echo(f"  • {name}")
 
 
+@cli.command()
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="List activities that would be deleted without deleting them.",
+)
+def reconcile(dry_run: bool):
+    """
+    Delete local activities (and their child data) that no longer exist in
+    Garmin Connect.
+
+    Fetches the full activity-id list from Garmin, diffs it against the local
+    ``activity`` table, and removes rows that Garmin no longer returns (e.g.
+    activities the user deleted in the app). Child rows (time-series, splits,
+    laps, GPS path, aggregate metrics) are removed via ON DELETE CASCADE.
+    """
+    from garmin_health_data.auth import discover_accounts
+    from garmin_health_data.garmin_client.api import get_activities_by_date
+    from garmin_health_data.garmin_client.client import GarminClient
+
+    accounts = discover_accounts()
+    if not accounts:
+        click.secho(
+            "No Garmin accounts found. Run 'garmin auth' first.", fg="yellow"
+        )
+        return
+
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    for user_id, token_dir in accounts:
+        click.echo(f"🔎 Reconciling account {user_id}...")
+        try:
+            client = GarminClient.from_tokens(Path(token_dir).expanduser())
+            activities = get_activities_by_date(client, "2000-01-01", today)
+        except Exception as e:
+            click.secho(
+                f"⚠️  Fetch failed for account {user_id}: {type(e).__name__}: {e}",
+                fg="yellow",
+            )
+            continue
+
+        garmin_ids = {
+            int(a["activityId"])
+            for a in activities
+            if a.get("activityId") is not None
+        }
+        click.echo(f"   Garmin has {len(garmin_ids)} activities.")
+
+        with get_session() as session:
+            db_ids = {
+                int(r[0])
+                for r in session.execute(text("SELECT activity_id FROM activity"))
+                .fetchall()
+            }
+            missing = sorted(db_ids - garmin_ids)
+            click.echo(
+                f"   Local activities not in Garmin: {len(missing)}"
+            )
+
+            if not missing:
+                click.echo("   Nothing to do.")
+                continue
+
+            if dry_run:
+                for m in missing:
+                    click.echo(f"   would delete activity {m}")
+                continue
+
+            # Delete in chunks to stay within DB parameter limits.
+            for i in range(0, len(missing), 500):
+                chunk = missing[i : i + 500]
+                session.execute(
+                    text(
+                        "DELETE FROM activity WHERE activity_id = ANY(:ids)"
+                        if _is_postgresql(_detect_database_url() or "")
+                        else "DELETE FROM activity WHERE activity_id IN ({})".format(
+                            ",".join(":i%d" % j for j in range(len(chunk)))
+                        )
+                    ),
+                    (
+                        {"ids": chunk}
+                        if _is_postgresql(_detect_database_url() or "")
+                        else {"i%d" % j: chunk[j] for j in range(len(chunk))}
+                    ),
+                )
+            click.secho(
+                f"   ✅ Deleted {len(missing)} activities.", fg="green"
+            )
+
+    click.echo("✅ Reconcile complete.")
+
+
 if __name__ == "__main__":
     cli()
