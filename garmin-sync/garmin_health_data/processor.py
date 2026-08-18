@@ -3245,6 +3245,11 @@ class GarminProcessor(Processor):
                 val = data.get(key)
                 if isinstance(val, list):
                     return [d for d in val if isinstance(d, dict)]
+            # Fall back to the first list-of-dicts value, mirroring
+            # _extract_calendar_items (handles unknown wrapper keys).
+            for val in data.values():
+                if isinstance(val, list) and val and isinstance(val[0], dict):
+                    return [d for d in val if isinstance(d, dict)]
         return []
 
     @staticmethod

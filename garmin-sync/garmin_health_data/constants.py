@@ -643,8 +643,19 @@ def _create_garmin_file_types() -> type:
     """
     patterns = {}
 
+    # Sort longest-name-first so a name that is a prefix/suffix of another
+    # (e.g. HEART_RATE_ZONES vs HEART_RATE, ACTIVITY_GEAR vs GEAR) is matched
+    # by its own pattern before a shorter name's loose ``.*_{name}_.*`` pattern
+    # can claim the file. ``_classify_files_by_type`` breaks on the first match,
+    # so most-specific-first makes classification unambiguous.
+    data_types = sorted(
+        GARMIN_DATA_REGISTRY.all_data_types,
+        key=lambda dt: len(dt.name),
+        reverse=True,
+    )
+
     # Add patterns for each data type in registry.
-    for data_type in GARMIN_DATA_REGISTRY.all_data_types:
+    for data_type in data_types:
         if data_type.name == "ACTIVITY":
             pattern = re.compile(rf".*_ACTIVITY_.*\.(fit|tcx)$")
         else:
