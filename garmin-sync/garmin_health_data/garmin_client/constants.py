@@ -107,7 +107,7 @@ USER_SETTINGS_URL = "/userprofile-service/userprofile/user-settings"
 # bounds, changeState) rather than the per-activity time-in-zone seconds that
 # land in the activity tables.
 HEART_RATE_ZONES_URL = "/biometric-service/heartRateZones"
-POWER_ZONES_URL = "/biometric-service/powerZones"
+POWER_ZONES_URL = "/biometric-service/powerZones/sports/all"
 
 # Wellness endpoints.
 DAILY_SLEEP_URL = "/wellness-service/wellness/dailySleepData"

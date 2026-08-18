@@ -400,7 +400,7 @@ class GarminDataRegistry:
                 "POWER_ZONES",
                 "get_power_zones",
                 APIMethodTimeParam.NO_DATE,
-                "/biometric-service/powerZones",
+                "/biometric-service/powerZones/sports/all",
                 "User's configured power zone definitions per sport "
                 "(zone number and low/high watt bounds).",
                 "⚡",
