@@ -51,6 +51,7 @@ from garmin_health_data.models import (
     Floors,
     Gear,
     HeartRate,
+    HeartRateZone,
     HRV,
     HrvDaily,
     Hydration,
@@ -62,6 +63,7 @@ from garmin_health_data.models import (
     MenstrualCycleTag,
     Nap,
     PersonalRecord,
+    PowerZone,
     RacePredictions,
     Respiration,
     RestingHr,
@@ -188,6 +190,8 @@ class GarminProcessor(Processor):
             [
                 ("USER_PROFILE", self._process_user_profile),
                 ("GEAR", self._process_gear),
+                ("HEART_RATE_ZONES", self._process_heart_rate_zones),
+                ("POWER_ZONES", self._process_power_zones),
                 ("CALENDAR", self._process_calendar),
                 ("ACTIVITIES_LIST", self._process_activities),
                 ("EXERCISE_SETS", self._process_exercise_sets),
@@ -3004,6 +3008,162 @@ class GarminProcessor(Processor):
         if not ts_str:
             return None
         return self._parse_garmin_iso(ts_str)
+
+    @staticmethod
+    def _extract_zone_list(data: Any) -> List[Dict[str, Any]]:
+        """
+        Normalize a zone-definition payload into a list of zone dicts.
+
+        The biometric zone endpoints return a bare list in practice, but accept a
+        dict wrapper (``zones`` / ``heartRateZones`` / ``powerZones`` / ``items``)
+        or a single zone dict for robustness against endpoint shape drift.
+
+        :param data: Raw JSON payload from the zone endpoint.
+        :return: List of zone dicts (may be empty).
+        """
+        if isinstance(data, list):
+            return [z for z in data if isinstance(z, dict)]
+        if isinstance(data, dict):
+            for key in ("zones", "heartRateZones", "powerZones", "zoneList", "items"):
+                val = data.get(key)
+                if isinstance(val, list):
+                    return [z for z in val if isinstance(z, dict)]
+            if "zoneNumber" in data:
+                return [data]
+        return []
+
+    @staticmethod
+    def _zone_low_high(
+        zone: Dict[str, Any],
+    ) -> tuple[Optional[float], Optional[float]]:
+        """
+        Extract the low/high bounds from a zone dict, tolerating key-name drift.
+
+        Heart-rate zones use ``zoneLow`` / ``zoneHigh``; power zones use
+        ``minWatts`` / ``maxWatts`` (and some builds emit bare ``min`` / ``max``).
+
+        :param zone: Zone definition dict.
+        :return: Tuple ``(low, high)`` as floats, or None for missing values.
+        """
+
+        def _num(v: Any) -> Optional[float]:
+            if v is None:
+                return None
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                return None
+
+        low = zone.get("zoneLow")
+        if low is None:
+            low = zone.get("minWatts")
+        if low is None:
+            low = zone.get("min")
+        high = zone.get("zoneHigh")
+        if high is None:
+            high = zone.get("maxWatts")
+        if high is None:
+            high = zone.get("max")
+        return _num(low), _num(high)
+
+    @staticmethod
+    def _zone_sport(zone: Dict[str, Any]) -> str:
+        """
+        Extract the sport key from a zone dict, defaulting to ``"DEFAULT"``.
+
+        :param zone: Zone definition dict.
+        :return: Sport key string.
+        """
+        sport = zone.get("sport") or zone.get("sportType")
+        return str(sport) if sport else "DEFAULT"
+
+    def _process_heart_rate_zones(self, file_path: Path, session: Session):
+        """
+        Process a HEART_RATE_ZONES file containing zone definitions.
+
+        Replaces the user's existing ``heart_rate_zone`` rows with the freshly
+        fetched definitions (delete-then-insert), so removed zones never linger.
+
+        :param file_path: Path to the HEART_RATE_ZONES JSON file.
+        :param session: SQLAlchemy Session object.
+        """
+        zones = self._extract_zone_list(self._load_json_file(file_path))
+        if not zones:
+            click.secho("⚠️ No heart-rate zone data found.", fg="yellow")
+            return
+
+        session.execute(
+            delete(HeartRateZone).where(HeartRateZone.user_id == int(self.user_id))
+        )
+
+        records: List[HeartRateZone] = []
+        for zone in zones:
+            try:
+                zone_number = int(zone.get("zoneNumber"))
+            except (TypeError, ValueError):
+                continue
+            low, high = self._zone_low_high(zone)
+            records.append(
+                HeartRateZone(
+                    user_id=int(self.user_id),
+                    sport=self._zone_sport(zone),
+                    zone_number=zone_number,
+                    zone_low=low,
+                    zone_high=high,
+                    change_state=zone.get("changeState"),
+                    raw=zone,
+                )
+            )
+
+        if records:
+            session.add_all(records)
+            click.echo(f"Processed {len(records)} heart-rate zone records.")
+        else:
+            click.secho("⚠️ No heart-rate zone records found.", fg="yellow")
+
+    def _process_power_zones(self, file_path: Path, session: Session):
+        """
+        Process a POWER_ZONES file containing power-zone definitions.
+
+        Replaces the user's existing ``power_zone`` rows with the freshly fetched
+        definitions (delete-then-insert), so removed zones never linger.
+
+        :param file_path: Path to the POWER_ZONES JSON file.
+        :param session: SQLAlchemy Session object.
+        """
+        zones = self._extract_zone_list(self._load_json_file(file_path))
+        if not zones:
+            click.secho("⚠️ No power-zone data found.", fg="yellow")
+            return
+
+        session.execute(
+            delete(PowerZone).where(PowerZone.user_id == int(self.user_id))
+        )
+
+        records: List[PowerZone] = []
+        for zone in zones:
+            try:
+                zone_number = int(zone.get("zoneNumber"))
+            except (TypeError, ValueError):
+                continue
+            low, high = self._zone_low_high(zone)
+            records.append(
+                PowerZone(
+                    user_id=int(self.user_id),
+                    sport=self._zone_sport(zone),
+                    zone_number=zone_number,
+                    zone_low=low,
+                    zone_high=high,
+                    change_state=zone.get("changeState"),
+                    raw=zone,
+                )
+            )
+
+        if records:
+            session.add_all(records)
+            click.echo(f"Processed {len(records)} power-zone records.")
+        else:
+            click.secho("⚠️ No power-zone records found.", fg="yellow")
 
     @staticmethod
     def _extract_calendar_items(data: Any) -> List[Dict[str, Any]]:

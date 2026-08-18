@@ -102,6 +102,13 @@ LOGIN_DELAY_MAX_S = 45.0
 SOCIAL_PROFILE_URL = "/userprofile-service/socialProfile"
 USER_SETTINGS_URL = "/userprofile-service/userprofile/user-settings"
 
+# Biometric zone definitions (heart-rate and power zone bounds per sport).
+# These return the user's configured zone thresholds (zoneNumber, low/high
+# bounds, changeState) rather than the per-activity time-in-zone seconds that
+# land in the activity tables.
+HEART_RATE_ZONES_URL = "/biometric-service/heartRateZones"
+POWER_ZONES_URL = "/biometric-service/powerZones"
+
 # Wellness endpoints.
 DAILY_SLEEP_URL = "/wellness-service/wellness/dailySleepData"
 DAILY_STRESS_URL = "/wellness-service/wellness/dailyStress"

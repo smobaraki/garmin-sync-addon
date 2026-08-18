@@ -44,6 +44,7 @@ from .constants import (
     GEAR_URL,
     GPX_DOWNLOAD_URL,
     HEART_RATES_DAILY_URL,
+    HEART_RATE_ZONES_URL,
     HRV_URL,
     HYDRATION_DAILY_URL,
     KML_DOWNLOAD_URL,
@@ -53,6 +54,7 @@ from .constants import (
     MENSTRUAL_CALENDAR_URL,
     MENSTRUAL_DAYVIEW_URL,
     PERSONAL_RECORD_URL,
+    POWER_ZONES_URL,
     RACE_PREDICTOR_URL,
     RESTING_HR_URL,
     TCX_DOWNLOAD_URL,
@@ -747,6 +749,36 @@ def get_user_profile(client: "GarminClient") -> Dict[str, Any]:
         birthday, and threshold metrics.
     """
     return client._connectapi(USER_SETTINGS_URL)
+
+
+def get_heart_rate_zones(client: "GarminClient") -> Any:
+    """
+    Fetch the authenticated user's heart-rate zone definitions.
+
+    Returns the configured zone bounds (``zoneNumber``, ``zoneLow``, ``zoneHigh``,
+    ``changeState``, and optional ``calcMin``/``calcMax``) rather than the
+    per-activity time-in-zone seconds. The payload is a list of zone dicts, one
+    set per sport (e.g. ``RUNNING``, ``CYCLING``, ``DEFAULT``).
+
+    :param client: GarminClient instance.
+    :return: Heart-rate zone definition payload (list of dicts), or None/empty.
+    """
+    return client._connectapi(HEART_RATE_ZONES_URL)
+
+
+def get_power_zones(client: "GarminClient") -> Any:
+    """
+    Fetch the authenticated user's power-zone definitions.
+
+    Returns the configured power zone bounds (``zoneNumber``, ``minWatts`` /
+    ``maxWatts`` — or ``zoneLow`` / ``zoneHigh`` — and ``changeState``) rather than
+    the per-activity time-in-zone seconds. The payload is a list of zone dicts, one
+    set per sport.
+
+    :param client: GarminClient instance.
+    :return: Power-zone definition payload (list of dicts), or None/empty.
+    """
+    return client._connectapi(POWER_ZONES_URL)
 
 
 def get_gear(client: "GarminClient") -> List[Dict[str, Any]]:

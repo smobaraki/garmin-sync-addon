@@ -1147,6 +1147,50 @@ class Gear(Base, UpsertBase):
     update_date = Column(DateTime)
 
 
+class HeartRateZone(Base, UpsertBase):
+    """
+    Garmin Connect heart-rate zone definitions (per sport).
+
+    Stores the user's configured zone thresholds from the biometric service
+    (``zoneNumber``, ``zoneLow``/``zoneHigh`` BPM bounds, ``changeState``), one
+    row per ``(user_id, sport, zone_number)``. ``raw`` preserves the full source
+    payload for fields not yet modeled. Rows are replaced on each sync so removed
+    zones do not linger.
+    """
+
+    __tablename__ = "heart_rate_zone"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    sport = Column(String, primary_key=True, default="DEFAULT")
+    zone_number = Column(Integer, primary_key=True)
+    zone_low = Column(Float)
+    zone_high = Column(Float)
+    change_state = Column(String)
+    raw = Column(JSON)
+
+
+class PowerZone(Base, UpsertBase):
+    """
+    Garmin Connect power-zone definitions (per sport).
+
+    Stores the user's configured power thresholds from the biometric service
+    (``zoneNumber``, low/high watt bounds, ``changeState``), one row per
+    ``(user_id, sport, zone_number)``. ``raw`` preserves the full source payload
+    for fields not yet modeled. Rows are replaced on each sync so removed zones
+    do not linger.
+    """
+
+    __tablename__ = "power_zone"
+
+    user_id = Column(BigInteger, ForeignKey("user.user_id"), primary_key=True)
+    sport = Column(String, primary_key=True, default="DEFAULT")
+    zone_number = Column(Integer, primary_key=True)
+    zone_low = Column(Float)
+    zone_high = Column(Float)
+    change_state = Column(String)
+    raw = Column(JSON)
+
+
 class CalendarEvent(Base, UpsertBase):
     """
     Garmin Connect training-calendar event (planned workout, training-plan

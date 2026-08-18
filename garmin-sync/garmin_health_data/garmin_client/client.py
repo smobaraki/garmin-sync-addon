@@ -1042,6 +1042,18 @@ class GarminClient:
         """
         return api.get_gear(self)
 
+    def get_heart_rate_zones(self) -> Any:
+        """
+        See :func:`api.get_heart_rate_zones`.
+        """
+        return api.get_heart_rate_zones(self)
+
+    def get_power_zones(self) -> Any:
+        """
+        See :func:`api.get_power_zones`.
+        """
+        return api.get_power_zones(self)
+
     def download_activity(
         self,
         activity_id: Any,

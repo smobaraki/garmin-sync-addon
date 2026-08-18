@@ -331,6 +331,24 @@ class GarminDataRegistry:
                 "model, type, status, usage limit, and begin/end dates.",
                 "⚙️",
             ),
+            GarminDataType(
+                "HEART_RATE_ZONES",
+                "get_heart_rate_zones",
+                APIMethodTimeParam.NO_DATE,
+                "/biometric-service/heartRateZones",
+                "User's configured heart-rate zone definitions per sport "
+                "(zone number and low/high BPM bounds).",
+                "❤️",
+            ),
+            GarminDataType(
+                "POWER_ZONES",
+                "get_power_zones",
+                APIMethodTimeParam.NO_DATE,
+                "/biometric-service/powerZones",
+                "User's configured power zone definitions per sport "
+                "(zone number and low/high watt bounds).",
+                "⚡",
+            ),
             # Month Data - (year, month) parameters: get_method(year, month).
             GarminDataType(
                 "CALENDAR",
