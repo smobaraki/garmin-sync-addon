@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.11
+
+- Fix: workout payloads expose `sport`/`sportType` as a nested dict, which
+  crashed the insert and quarantined the whole day's file set. Unwrap nested
+  sport into its `sportTypeKey` string and guard the generic keyed-row helper
+  against any dict/list value falling into a scalar column.
+
 ## 1.5.10
 
 - Feature: scrape the remaining Garmin Connect endpoints for a full data mirror:
