@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.12
+
+- Fix: file classification matched `HEART_RATE_ZONES` files against the
+  `HEART_RATE` pattern (and `ACTIVITY_GEAR` against `GEAR`), routing them to the
+  wrong processor and quarantining the whole day's file set. Patterns are now
+  matched longest-name-first so prefix/suffix-overlapping names classify
+  correctly.
+
 ## 1.5.11
 
 - Fix: workout payloads expose `sport`/`sportType` as a nested dict, which
