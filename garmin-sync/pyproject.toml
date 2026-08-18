@@ -73,7 +73,7 @@ where = ["."]
 include = ["garmin_health_data*"]
 
 [tool.setuptools.package-data]
-garmin_health_data = ["tables.ddl", "tables_postgres.ddl"]
+garmin_health_data = ["tables.ddl", "tables_postgres.ddl", "views_postgres.ddl"]
 
 [tool.autoflake]
 expand-star-imports = true
