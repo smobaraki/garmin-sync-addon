@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.14
+
+- Feature: gear and calendar now use replace semantics (delete-then-insert) so
+  items removed in Garmin Connect disappear from the local copy. Adds a new
+  `garmin reconcile [--dry-run]` command that deletes local activities (and
+  their cascading child data) that no longer exist in Garmin Connect.
+
 ## 1.5.13
 
 - Fix: power zones endpoint returned 405 — the correct path is
