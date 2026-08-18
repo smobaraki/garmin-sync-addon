@@ -335,6 +335,39 @@ def _execute_ddl_on_postgresql(engine) -> None:
             except Exception:
                 c.rollback()
 
+    _apply_views_on_postgresql(engine)
+
+
+def _apply_views_on_postgresql(engine) -> None:
+    """
+    Create (or replace) the convenience views in ``views_postgres.ddl``.
+
+    Runs after tables are created so the views can reference them. Uses
+    ``CREATE OR REPLACE VIEW`` so re-running is idempotent and newly edited view
+    definitions take effect without a manual ``DROP VIEW``. Best-effort: any
+    individual statement failure is rolled back without aborting the rest, so a
+    problem in one view never blocks database initialization.
+
+    :param engine: SQLAlchemy engine bound to the PostgreSQL database.
+    """
+    views_file = Path(__file__).parent / "views_postgres.ddl"
+    if not views_file.exists():
+        return
+    views_sql = views_file.read_text()
+    views_sql = re.sub(r'/\*.*?\*/', '', views_sql, flags=re.DOTALL)
+    views_sql = re.sub(r'--[^\n]*', '', views_sql)
+
+    with engine.connect() as conn:
+        for stmt in _split_sql_statements(views_sql):
+            stmt = stmt.strip()
+            if not stmt or stmt.startswith("--") or stmt.startswith("/*"):
+                continue
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+
 
 def create_tables(db_path: str = "garmin_data.db") -> None:
     """
