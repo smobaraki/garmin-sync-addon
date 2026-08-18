@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.9
+
+- Feature: scrape the user's configured heart-rate and power zone definitions from
+  Garmin's `/biometric-service/heartRateZones` and `/biometric-service/powerZones`
+  endpoints into new `heart_rate_zone` and `power_zone` tables (one row per
+  `(user_id, sport, zone_number)` with low/high bounds and `changeState`; replace
+  semantics on re-sync).
+- Feature: add convenience views `v_activity_ts`, `v_activity_laps` and
+  `v_activity_splits` that pivot the EAV activity tables into typed columns with
+  normalized field names. Applied idempotently via `CREATE OR REPLACE VIEW` after
+  table creation.
+
 ## 1.5.8
 
 - Fix: calendar month was off by one — the `/calendar-service/year/{year}/month/{month}`
